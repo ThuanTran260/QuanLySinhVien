@@ -68,7 +68,7 @@ public class UIComponentTest {
         assertEquals("Điểm TB", table.getColumnName(5));
         assertEquals("Xếp Loại", table.getColumnName(6));
 
-        assertTrue(table.getRowCount() >= 10, "Bảng phải nạp ít nhất 10 bản ghi mẫu");
+        assertEquals(84, table.getRowCount(), "Bảng phải nạp chính xác 84 sinh viên thực tế");
 
         // Mô phỏng chọn dòng đầu tiên trên bảng
         table.setRowSelectionInterval(0, 0);

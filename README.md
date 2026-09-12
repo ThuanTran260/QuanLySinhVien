@@ -35,7 +35,7 @@ src/main/java/com/quanlysinhvien/
 - **Tài khoản root:** `root`
 - **Mật khẩu:** *(Để trống hoặc điền mật khẩu MySQL của bạn)*
 - Cấu hình được lưu tại: `db.properties` và `src/main/resources/db.properties`.
-- Script khởi tạo: `database.sql` (Chương trình có cơ chế tự động khởi tạo database và nạp 10 bản ghi mẫu nếu chưa có).
+- Script khởi tạo: `database.sql` (Chương trình có cơ chế tự động khởi tạo database và nạp toàn bộ 84 sinh viên từ file `sinhvien.txt` nếu chưa có).
 
 ---
 

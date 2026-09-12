@@ -203,14 +203,14 @@ public class SinhVienDAO {
         if ("TEN".equalsIgnoreCase(sortBy)) {
             // Sắp xếp theo Tên (từ cuối cùng của Họ và Tên theo chuẩn tiếng Việt)
             sql = "SELECT MaSV, HoTen, Lop, NgaySinh, DiemTB FROM SinhVien " +
-                    "ORDER BY SUBSTRING_INDEX(HoTen, ' ', -1) COLLATE utf8mb4_vietnamese_ci " + direction + ", HoTen COLLATE utf8mb4_vietnamese_ci " + direction;
+                    "ORDER BY SUBSTRING_INDEX(HoTen, ' ', -1) COLLATE utf8mb4_vi_0900_as_cs " + direction + ", HoTen COLLATE utf8mb4_vi_0900_as_cs " + direction;
         } else if ("HOTEN".equalsIgnoreCase(sortBy)) {
-            sql = "SELECT MaSV, HoTen, Lop, NgaySinh, DiemTB FROM SinhVien ORDER BY HoTen COLLATE utf8mb4_vietnamese_ci " + direction;
+            sql = "SELECT MaSV, HoTen, Lop, NgaySinh, DiemTB FROM SinhVien ORDER BY HoTen COLLATE utf8mb4_vi_0900_as_cs " + direction;
         } else if ("DIEM".equalsIgnoreCase(sortBy)) {
             sql = "SELECT MaSV, HoTen, Lop, NgaySinh, DiemTB FROM SinhVien ORDER BY DiemTB " + direction;
         } else if ("LOP".equalsIgnoreCase(sortBy)) {
             sql = "SELECT MaSV, HoTen, Lop, NgaySinh, DiemTB FROM SinhVien " +
-                    "ORDER BY Lop " + direction + ", SUBSTRING_INDEX(HoTen, ' ', -1) COLLATE utf8mb4_vietnamese_ci ASC";
+                    "ORDER BY Lop " + direction + ", SUBSTRING_INDEX(HoTen, ' ', -1) COLLATE utf8mb4_vi_0900_as_cs ASC";
         } else {
             sql = "SELECT MaSV, HoTen, Lop, NgaySinh, DiemTB FROM SinhVien ORDER BY MaSV " + direction;
         }

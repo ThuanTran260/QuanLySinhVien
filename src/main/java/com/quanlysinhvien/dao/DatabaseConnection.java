@@ -110,10 +110,9 @@ public class DatabaseConnection {
 
             // Tạo Database nếu chưa có
             stmt.executeUpdate("CREATE DATABASE IF NOT EXISTS " + DB_NAME + " CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-            stmt.executeUpdate("USE " + DB_NAME);
 
             // Tạo Bảng SinhVien nếu chưa có
-            String createTableSql = "CREATE TABLE IF NOT EXISTS SinhVien (" +
+            String createTableSql = "CREATE TABLE IF NOT EXISTS " + DB_NAME + ".SinhVien (" +
                     "MaSV VARCHAR(10) NOT NULL PRIMARY KEY, " +
                     "HoTen VARCHAR(50) NOT NULL, " +
                     "Lop VARCHAR(20) NOT NULL, " +
@@ -122,21 +121,31 @@ public class DatabaseConnection {
                     ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
             stmt.executeUpdate(createTableSql);
 
-            // Kiểm tra số lượng bản ghi mẫu
-            ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM SinhVien");
+            // Kiểm tra số lượng bản ghi
             int count = 0;
-            if (rs.next()) {
-                count = rs.getInt(1);
+            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + DB_NAME + ".SinhVien")) {
+                if (rs.next()) {
+                    count = rs.getInt(1);
+                }
             }
-            rs.close();
 
-            // Nếu bảng rỗng, nạp dữ liệu từ file sinhvien.txt nếu có
+            // Nếu bảng rỗng, nạp dữ liệu từ file sinhvien.txt hoặc classpath resource nếu có
             if (count == 0) {
+                InputStream is = null;
                 File txtFile = new File("sinhvien.txt");
                 if (txtFile.exists() && txtFile.isFile()) {
-                    String insertSql = "INSERT INTO SinhVien (MaSV, HoTen, Lop, NgaySinh, DiemTB) VALUES (?, ?, ?, ?, ?)";
+                    try {
+                        is = new FileInputStream(txtFile);
+                    } catch (Exception ignored) {
+                    }
+                }
+                if (is == null) {
+                    is = DatabaseConnection.class.getClassLoader().getResourceAsStream("sinhvien.txt");
+                }
+                if (is != null) {
+                    String insertSql = "INSERT INTO " + DB_NAME + ".SinhVien (MaSV, HoTen, Lop, NgaySinh, DiemTB) VALUES (?, ?, ?, ?, ?)";
                     try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(
-                            new java.io.FileInputStream(txtFile), java.nio.charset.StandardCharsets.UTF_8));
+                            is, java.nio.charset.StandardCharsets.UTF_8));
                          java.sql.PreparedStatement ps = rootConn.prepareStatement(insertSql)) {
                         String line;
                         while ((line = reader.readLine()) != null) {

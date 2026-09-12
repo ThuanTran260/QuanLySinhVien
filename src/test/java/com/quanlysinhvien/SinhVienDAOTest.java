@@ -40,11 +40,11 @@ public class SinhVienDAOTest {
 
     @Test
     @Order(2)
-    @DisplayName("Lấy danh sách tất cả sinh viên (ít nhất 10 bản ghi mẫu)")
+    @DisplayName("Lấy danh sách tất cả sinh viên (chính xác 84 sinh viên thực tế)")
     void testGetAllStudents() throws SQLException {
         List<SinhVien> list = dao.getAll();
         assertNotNull(list);
-        assertTrue(list.size() >= 10, "CSDL phải có ít nhất 10 bản ghi mẫu");
+        assertEquals(84, list.size(), "CSDL phải có đúng 84 sinh viên trích xuất từ Excel");
     }
 
     @Test
@@ -96,16 +96,27 @@ public class SinhVienDAOTest {
     @Order(4)
     @DisplayName("Kiểm tra chức năng Sắp xếp theo Tên và Điểm TB")
     void testSorting() throws SQLException {
-        // 1. Sắp xếp theo Tên (danh sách thực tế 84 SV: Anh ... Vỹ)
+        // 1. Sắp xếp theo Tên tăng dần (danh sách thực tế 84 SV: Anh ... Vỹ)
         List<SinhVien> sortedByNameAsc = dao.getAllSorted("TEN", true);
         assertFalse(sortedByNameAsc.isEmpty());
         assertEquals("Anh", sortedByNameAsc.get(0).getTen(), "Người đầu tiên khi sắp xếp theo Tên phải là Anh");
         assertEquals("Vỹ", sortedByNameAsc.get(sortedByNameAsc.size() - 1).getTen(), "Người cuối cùng phải là Vỹ");
 
+        java.text.Collator viCollator = java.text.Collator.getInstance(java.util.Locale.forLanguageTag("vi-VN"));
+        for (int i = 0; i < sortedByNameAsc.size() - 1; i++) {
+            assertTrue(viCollator.compare(sortedByNameAsc.get(i).getTen(), sortedByNameAsc.get(i + 1).getTen()) <= 0,
+                    "Lỗi thứ tự tên: " + sortedByNameAsc.get(i).getTen() + " vs " + sortedByNameAsc.get(i + 1).getTen());
+        }
+
+        // Sắp xếp theo Tên giảm dần (Vỹ ... Anh)
+        List<SinhVien> sortedByNameDesc = dao.getAllSorted("TEN", false);
+        assertFalse(sortedByNameDesc.isEmpty());
+        assertEquals("Vỹ", sortedByNameDesc.get(0).getTen(), "Người đầu tiên khi sắp xếp giảm dần theo Tên phải là Vỹ");
+        assertEquals("Anh", sortedByNameDesc.get(sortedByNameDesc.size() - 1).getTen(), "Người cuối cùng khi sắp xếp giảm dần phải là Anh");
+
         // 2. Sắp xếp theo Họ và Tên đầy đủ
         List<SinhVien> sortedByFullNameAsc = dao.getAllSorted("HOTEN", true);
         assertFalse(sortedByFullNameAsc.isEmpty());
-        java.text.Collator viCollator = java.text.Collator.getInstance(java.util.Locale.forLanguageTag("vi-VN"));
         for (int i = 0; i < sortedByFullNameAsc.size() - 1; i++) {
             assertTrue(viCollator.compare(sortedByFullNameAsc.get(i).getHoTen(), sortedByFullNameAsc.get(i + 1).getHoTen()) <= 0);
         }
@@ -123,7 +134,7 @@ public class SinhVienDAOTest {
     @DisplayName("Kiểm tra chức năng Thống kê (Số lượng, Điểm TB theo lớp, Thủ khoa)")
     void testStatistics() throws SQLException {
         int count = dao.getCount();
-        assertTrue(count >= 10);
+        assertEquals(84, count, "Bảng SinhVien phải có chính xác 84 bản ghi");
 
         Map<String, Double> avgMap = dao.getAverageScoreByClass();
         assertNotNull(avgMap);
