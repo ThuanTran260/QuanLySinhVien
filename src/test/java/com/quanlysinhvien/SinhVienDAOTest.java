@@ -96,11 +96,11 @@ public class SinhVienDAOTest {
     @Order(4)
     @DisplayName("Kiểm tra chức năng Sắp xếp theo Tên và Điểm TB")
     void testSorting() throws SQLException {
-        // 1. Sắp xếp theo Tên (chuẩn tiếng Việt: An, Bích, Cường... Việt)
+        // 1. Sắp xếp theo Tên (danh sách thực tế 84 SV: Anh ... Vỹ)
         List<SinhVien> sortedByNameAsc = dao.getAllSorted("TEN", true);
         assertFalse(sortedByNameAsc.isEmpty());
-        assertEquals("An", sortedByNameAsc.get(0).getTen(), "Người đầu tiên khi sắp xếp theo Tên phải là An");
-        assertEquals("Việt", sortedByNameAsc.get(sortedByNameAsc.size() - 1).getTen(), "Người cuối cùng phải là Việt");
+        assertEquals("Anh", sortedByNameAsc.get(0).getTen(), "Người đầu tiên khi sắp xếp theo Tên phải là Anh");
+        assertEquals("Vỹ", sortedByNameAsc.get(sortedByNameAsc.size() - 1).getTen(), "Người cuối cùng phải là Vỹ");
 
         // 2. Sắp xếp theo Họ và Tên đầy đủ
         List<SinhVien> sortedByFullNameAsc = dao.getAllSorted("HOTEN", true);

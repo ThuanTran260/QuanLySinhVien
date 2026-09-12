@@ -130,19 +130,34 @@ public class DatabaseConnection {
             }
             rs.close();
 
-            // Nếu bảng rỗng, chèn 10 bản ghi mẫu phục vụ kiểm thử
+            // Nếu bảng rỗng, nạp dữ liệu từ file sinhvien.txt nếu có
             if (count == 0) {
-                stmt.executeUpdate("INSERT INTO SinhVien (MaSV, HoTen, Lop, NgaySinh, DiemTB) VALUES " +
-                        "('SV001', 'Nguyễn Văn An', 'CNTT1', '2003-05-15', 8.5), " +
-                        "('SV002', 'Trần Thị Bích', 'CNTT1', '2003-08-20', 9.2), " +
-                        "('SV003', 'Lê Hoàng Cường', 'CNTT2', '2003-01-10', 7.0), " +
-                        "('SV004', 'Phạm Minh Đức', 'CNTT2', '2003-11-25', 6.5), " +
-                        "('SV005', 'Hoàng Thu Hà', 'KTPM1', '2003-03-30', 8.8), " +
-                        "('SV006', 'Đỗ Tuấn Hải', 'KTPM1', '2003-07-12', 7.8), " +
-                        "('SV007', 'Vũ Thị Mai', 'HTTT1', '2003-09-05', 9.5), " +
-                        "('SV008', 'Bùi Quang Nam', 'HTTT1', '2003-12-18', 5.5), " +
-                        "('SV009', 'Ngô Phương Oanh', 'CNTT1', '2003-04-22', 8.0), " +
-                        "('SV010', 'Đặng Quốc Việt', 'CNTT2', '2003-10-08', 9.0)");
+                File txtFile = new File("sinhvien.txt");
+                if (txtFile.exists() && txtFile.isFile()) {
+                    String insertSql = "INSERT INTO SinhVien (MaSV, HoTen, Lop, NgaySinh, DiemTB) VALUES (?, ?, ?, ?, ?)";
+                    try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(
+                            new java.io.FileInputStream(txtFile), java.nio.charset.StandardCharsets.UTF_8));
+                         java.sql.PreparedStatement ps = rootConn.prepareStatement(insertSql)) {
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            String trimmed = line.trim();
+                            if (trimmed.startsWith("\uFEFF")) trimmed = trimmed.substring(1).trim();
+                            if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.startsWith("//")) continue;
+                            String[] parts = trimmed.split("\\|", -1);
+                            if (parts.length >= 5) {
+                                ps.setString(1, parts[0].trim());
+                                ps.setString(2, parts[1].trim());
+                                ps.setString(3, parts[2].trim());
+                                ps.setDate(4, java.sql.Date.valueOf(parts[3].trim()));
+                                ps.setFloat(5, Float.parseFloat(parts[4].trim().replace(',', '.')));
+                                ps.addBatch();
+                            }
+                        }
+                        ps.executeBatch();
+                    } catch (Exception e) {
+                        System.err.println("Lỗi khi nạp dữ liệu từ sinhvien.txt: " + e.getMessage());
+                    }
+                }
             }
         } catch (SQLException e) {
             System.err.println("Lỗi khi tự động khởi tạo CSDL: " + e.getMessage());
