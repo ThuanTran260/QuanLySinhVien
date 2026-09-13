@@ -4,12 +4,14 @@ import com.quanlysinhvien.ui.CalculatorPanel;
 import com.quanlysinhvien.ui.LoginForm;
 import com.quanlysinhvien.ui.MainFrame;
 import com.quanlysinhvien.ui.StudentManagementPanel;
+import com.quanlysinhvien.ui.theme.UITheme;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
 import java.awt.GraphicsEnvironment;
+import java.awt.Insets;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -102,6 +104,14 @@ public class UIComponentTest {
         assertEquals(2, tabbedPane.getTabCount(), "Phải có đúng 2 tab");
         assertTrue(tabbedPane.getTitleAt(0).contains("Quản Lý Sinh Viên"));
         assertTrue(tabbedPane.getTitleAt(1).contains("Máy Tính Cơ Bản"));
+
+        // Kiểm tra thuộc tính FlatLaf Underlined Tabs và MenuBar phẳng
+        assertEquals("underlined", tabbedPane.getClientProperty("JTabbedPane.tabType"));
+        assertEquals(UITheme.PRIMARY, tabbedPane.getClientProperty("JTabbedPane.underlineColor"));
+        assertEquals(Boolean.FALSE, tabbedPane.getClientProperty("JTabbedPane.hasFullBorder"));
+        assertEquals(new Insets(10, 20, 10, 20), tabbedPane.getClientProperty("JTabbedPane.tabInsets"));
+        assertEquals(Boolean.FALSE, mainFrame.getRootPane().getClientProperty("JRootPane.menuBarEmbedded"));
+        assertNotNull(mainFrame.getJMenuBar(), "Menu bar phải được khởi tạo");
 
         mainFrame.dispose();
     }

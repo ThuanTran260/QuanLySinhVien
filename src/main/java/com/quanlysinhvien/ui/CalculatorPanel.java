@@ -1,14 +1,16 @@
 package com.quanlysinhvien.ui;
 
 import com.quanlysinhvien.model.Calculator;
+import com.quanlysinhvien.ui.theme.ModernButton;
+import com.quanlysinhvien.ui.theme.ModernCardPanel;
+import com.quanlysinhvien.ui.theme.UITheme;
 
 import javax.swing.*;
-import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.text.DecimalFormat;
 
 /**
- * Bài 2: Panel Máy tính cơ bản.
+ * Bài 2: Panel Máy tính cơ bản với phong cách hiện đại (Stripe Clean Canvas).
  * Hỗ trợ các phép toán +, -, *, /; bắt lỗi nhập liệu và cảnh báo chia cho 0.
  */
 public class CalculatorPanel extends JPanel {
@@ -23,66 +25,106 @@ public class CalculatorPanel extends JPanel {
 
     private void initUI() {
         setLayout(new BorderLayout(15, 15));
-        setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+        setBackground(UITheme.CANVAS_BG);
+        setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
 
-        // Tiêu đề đầu trang
-        JLabel lblHeader = new JLabel("MÁY TÍNH CƠ BẢN", SwingConstants.CENTER);
-        lblHeader.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblHeader.setForeground(new Color(24, 90, 157));
-        add(lblHeader, BorderLayout.NORTH);
+        // Header
+        JPanel headerPanel = new JPanel();
+        headerPanel.setOpaque(false);
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
 
-        // Khung trung tâm chứa các ô nhập và kết quả
-        JPanel centerPanel = new JPanel();
-        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        JLabel lblTitle = new JLabel("MÁY TÍNH CƠ BẢN", SwingConstants.CENTER);
+        lblTitle.setFont(UITheme.FONT_TITLE_LARGE);
+        lblTitle.setForeground(UITheme.TEXT_PRIMARY);
+        lblTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Group nhập liệu
-        JPanel inputGroup = new JPanel(new GridBagLayout());
-        inputGroup.setBorder(BorderFactory.createTitledBorder(
-                BorderFactory.createEtchedBorder(), "Nhập dữ liệu tính toán",
-                TitledBorder.LEFT, TitledBorder.TOP, new Font("Segoe UI", Font.BOLD, 14)));
+        JLabel lblSubtitle = new JLabel("Hỗ trợ tính toán số học chính xác & xử lý ngoại lệ", SwingConstants.CENTER);
+        lblSubtitle.setFont(UITheme.FONT_REGULAR);
+        lblSubtitle.setForeground(UITheme.TEXT_SECONDARY);
+        lblSubtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        headerPanel.add(lblTitle);
+        headerPanel.add(Box.createRigidArea(new Dimension(0, 4)));
+        headerPanel.add(lblSubtitle);
+        add(headerPanel, BorderLayout.NORTH);
+
+        // Center: Card container
+        JPanel centerWrapper = new JPanel(new GridBagLayout());
+        centerWrapper.setOpaque(false);
+
+        ModernCardPanel card = new ModernCardPanel(new BorderLayout(15, 20), 30);
+        card.setPreferredSize(new Dimension(620, 390));
+
+        // Display card for Result at Top of Card
+        ModernCardPanel displayBox = new ModernCardPanel(new FlowLayout(FlowLayout.CENTER, 10, 15), 10);
+        displayBox.setCardBackground(UITheme.TABLE_ROW_ODD);
+        displayBox.setBorderColor(UITheme.BORDER_COLOR);
+
+        lblKetQua = new JLabel("Chưa có kết quả");
+        lblKetQua.setFont(UITheme.FONT_TITLE_LARGE);
+        lblKetQua.setForeground(UITheme.PRIMARY);
+        displayBox.add(lblKetQua);
+
+        card.add(displayBox, BorderLayout.NORTH);
+
+        // Middle: Inputs (a & b)
+        JPanel inputPanel = new JPanel(new GridBagLayout());
+        inputPanel.setOpaque(false);
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.insets = new Insets(10, 12, 10, 12);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         // Số a
         gbc.gridx = 0;
         gbc.gridy = 0;
-        gbc.weightx = 0.2;
+        gbc.weightx = 0.25;
         JLabel lblA = new JLabel("Nhập số a:");
-        lblA.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        inputGroup.add(lblA, gbc);
+        lblA.setFont(UITheme.FONT_BOLD);
+        lblA.setForeground(UITheme.TEXT_PRIMARY);
+        inputPanel.add(lblA, gbc);
 
         gbc.gridx = 1;
-        gbc.weightx = 0.8;
+        gbc.weightx = 0.75;
         txtA = new JTextField(20);
-        txtA.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        inputGroup.add(txtA, gbc);
+        UITheme.styleTextField(txtA);
+        inputPanel.add(txtA, gbc);
 
         // Số b
         gbc.gridx = 0;
         gbc.gridy = 1;
-        gbc.weightx = 0.2;
+        gbc.weightx = 0.25;
         JLabel lblB = new JLabel("Nhập số b:");
-        lblB.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        inputGroup.add(lblB, gbc);
+        lblB.setFont(UITheme.FONT_BOLD);
+        lblB.setForeground(UITheme.TEXT_PRIMARY);
+        inputPanel.add(lblB, gbc);
 
         gbc.gridx = 1;
-        gbc.weightx = 0.8;
+        gbc.weightx = 0.75;
         txtB = new JTextField(20);
-        txtB.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        inputGroup.add(txtB, gbc);
+        UITheme.styleTextField(txtB);
+        inputPanel.add(txtB, gbc);
 
-        centerPanel.add(inputGroup);
-        centerPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        card.add(inputPanel, BorderLayout.CENTER);
 
-        // Các nút phép tính
-        JPanel buttonGroup = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
-        JButton btnAdd = createButton("+ (Cộng)", new Color(76, 175, 80));
-        JButton btnSub = createButton("- (Trừ)", new Color(33, 150, 243));
-        JButton btnMul = createButton("* (Nhân)", new Color(255, 152, 0));
-        JButton btnDiv = createButton("/ (Chia)", new Color(156, 39, 176));
-        JButton btnClear = createButton("Xóa lại", new Color(158, 158, 158));
+        // Bottom: Operation Buttons
+        JPanel buttonGroup = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 10));
+        buttonGroup.setOpaque(false);
+
+        ModernButton btnAdd = new ModernButton("+ (Cộng)", UITheme.PRIMARY);
+        btnAdd.setPreferredSize(new Dimension(105, 38));
+
+        ModernButton btnSub = new ModernButton("- (Trừ)", new Color(0x25, 0x63, 0xEB));
+        btnSub.setPreferredSize(new Dimension(105, 38));
+
+        ModernButton btnMul = new ModernButton("* (Nhân)", new Color(0xD9, 0x77, 0x06));
+        btnMul.setPreferredSize(new Dimension(105, 38));
+
+        ModernButton btnDiv = new ModernButton("/ (Chia)", new Color(0x7C, 0x3A, 0xED));
+        btnDiv.setPreferredSize(new Dimension(105, 38));
+
+        ModernButton btnClear = new ModernButton("Xóa lại", UITheme.NEUTRAL_BTN_BG, UITheme.NEUTRAL_BTN_HOVER, UITheme.NEUTRAL_BTN_TEXT);
+        btnClear.setBorderColor(UITheme.NEUTRAL_BTN_BORDER);
+        btnClear.setPreferredSize(new Dimension(105, 38));
 
         buttonGroup.add(btnAdd);
         buttonGroup.add(btnSub);
@@ -90,25 +132,12 @@ public class CalculatorPanel extends JPanel {
         buttonGroup.add(btnDiv);
         buttonGroup.add(btnClear);
 
-        centerPanel.add(buttonGroup);
-        centerPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        card.add(buttonGroup, BorderLayout.SOUTH);
 
-        // Khung hiển thị kết quả
-        JPanel resultPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        resultPanel.setBorder(BorderFactory.createTitledBorder(
-                BorderFactory.createEtchedBorder(), "Kết quả phép tính",
-                TitledBorder.LEFT, TitledBorder.TOP, new Font("Segoe UI", Font.BOLD, 14)));
-        resultPanel.setPreferredSize(new Dimension(500, 80));
+        centerWrapper.add(card);
+        add(centerWrapper, BorderLayout.CENTER);
 
-        lblKetQua = new JLabel("Chưa có kết quả");
-        lblKetQua.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        lblKetQua.setForeground(new Color(24, 90, 157));
-        resultPanel.add(lblKetQua);
-
-        centerPanel.add(resultPanel);
-        add(centerPanel, BorderLayout.CENTER);
-
-        // Sự kiện các nút
+        // Event Listeners
         btnAdd.addActionListener(e -> calculate('+'));
         btnSub.addActionListener(e -> calculate('-'));
         btnMul.addActionListener(e -> calculate('*'));
@@ -117,19 +146,9 @@ public class CalculatorPanel extends JPanel {
             txtA.setText("");
             txtB.setText("");
             lblKetQua.setText("Chưa có kết quả");
-            lblKetQua.setForeground(new Color(24, 90, 157));
+            lblKetQua.setForeground(UITheme.PRIMARY);
             txtA.requestFocus();
         });
-    }
-
-    private JButton createButton(String text, Color bg) {
-        JButton btn = new JButton(text);
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        btn.setBackground(bg);
-        btn.setForeground(Color.WHITE);
-        btn.setFocusPainted(false);
-        btn.setPreferredSize(new Dimension(110, 38));
-        return btn;
     }
 
     public void calculate(char operator) {

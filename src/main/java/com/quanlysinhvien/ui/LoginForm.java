@@ -1,12 +1,16 @@
 package com.quanlysinhvien.ui;
 
+import com.quanlysinhvien.ui.theme.ModernButton;
+import com.quanlysinhvien.ui.theme.ModernCardPanel;
+import com.quanlysinhvien.ui.theme.UITheme;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
 /**
- * Bài 1: Form đăng nhập hệ thống.
+ * Bài 1: Form đăng nhập hệ thống hiện đại theo phong cách Stripe.
  * Tài khoản mặc định: username = admin, password = 123.
  */
 public class LoginForm extends JFrame {
@@ -21,80 +25,103 @@ public class LoginForm extends JFrame {
 
     private void initUI() {
         setTitle("Đăng nhập hệ thống - Quản lý sinh viên");
-        setSize(420, 260);
+        setSize(450, 370);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
+        getContentPane().setBackground(UITheme.CANVAS_BG);
 
-        // Panel chính
-        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
+        // Root container with canvas background and padding
+        JPanel rootPanel = new JPanel(new GridBagLayout());
+        rootPanel.setBackground(UITheme.CANVAS_BG);
+        rootPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Tiêu đề
-        JLabel lblTitle = new JLabel("HỆ THỐNG QUẢN LÝ SINH VIÊN", SwingConstants.CENTER);
-        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        lblTitle.setForeground(new Color(24, 90, 157));
-        mainPanel.add(lblTitle, BorderLayout.NORTH);
+        // Modern Card Container
+        ModernCardPanel cardPanel = new ModernCardPanel(new BorderLayout(15, 15), 25);
+        cardPanel.setPreferredSize(new Dimension(390, 290));
 
-        // Form nhập liệu
+        // Header Section
+        JPanel headerPanel = new JPanel();
+        headerPanel.setOpaque(false);
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+
+        JLabel lblTitle = new JLabel("ĐĂNG NHẬP HỆ THỐNG", SwingConstants.CENTER);
+        lblTitle.setFont(UITheme.FONT_TITLE_LARGE);
+        lblTitle.setForeground(UITheme.TEXT_PRIMARY);
+        lblTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel lblSubtitle = new JLabel("Quản Lý Sinh Viên & Tiện Ích", SwingConstants.CENTER);
+        lblSubtitle.setFont(UITheme.FONT_REGULAR);
+        lblSubtitle.setForeground(UITheme.TEXT_SECONDARY);
+        lblSubtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        headerPanel.add(lblTitle);
+        headerPanel.add(Box.createRigidArea(new Dimension(0, 4)));
+        headerPanel.add(lblSubtitle);
+
+        cardPanel.add(headerPanel, BorderLayout.NORTH);
+
+        // Form Inputs Section
         JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setOpaque(false);
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.insets = new Insets(6, 4, 6, 4);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        // Tên đăng nhập
+        // Username
         gbc.gridx = 0;
         gbc.gridy = 0;
-        gbc.weightx = 0.3;
+        gbc.weightx = 0.35;
         JLabel lblUser = new JLabel("Tên đăng nhập:");
-        lblUser.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        lblUser.setFont(UITheme.FONT_BOLD);
+        lblUser.setForeground(UITheme.TEXT_PRIMARY);
         formPanel.add(lblUser, gbc);
 
         gbc.gridx = 1;
-        gbc.weightx = 0.7;
+        gbc.weightx = 0.65;
         txtUsername = new JTextField("admin");
-        txtUsername.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        UITheme.styleTextField(txtUsername);
         formPanel.add(txtUsername, gbc);
 
-        // Mật khẩu
+        // Password
         gbc.gridx = 0;
         gbc.gridy = 1;
-        gbc.weightx = 0.3;
+        gbc.weightx = 0.35;
         JLabel lblPass = new JLabel("Mật khẩu:");
-        lblPass.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        lblPass.setFont(UITheme.FONT_BOLD);
+        lblPass.setForeground(UITheme.TEXT_PRIMARY);
         formPanel.add(lblPass, gbc);
 
         gbc.gridx = 1;
-        gbc.weightx = 0.7;
+        gbc.weightx = 0.65;
         txtPassword = new JPasswordField("123");
-        txtPassword.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        UITheme.styleTextField(txtPassword);
         formPanel.add(txtPassword, gbc);
 
-        mainPanel.add(formPanel, BorderLayout.CENTER);
+        cardPanel.add(formPanel, BorderLayout.CENTER);
 
-        // Các nút bấm
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
-        btnLogin = new JButton("Đăng nhập");
-        btnLogin.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btnLogin.setBackground(new Color(33, 150, 243));
-        btnLogin.setForeground(Color.WHITE);
-        btnLogin.setFocusPainted(false);
+        // Buttons Section
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 0));
+        buttonPanel.setOpaque(false);
 
-        btnExit = new JButton("Thoát");
-        btnExit.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        btnExit.setFocusPainted(false);
+        btnLogin = new ModernButton("Đăng nhập", UITheme.PRIMARY, UITheme.PRIMARY_HOVER, Color.WHITE);
+        btnLogin.setPreferredSize(new Dimension(130, 36));
+
+        btnExit = new ModernButton("Thoát", UITheme.NEUTRAL_BTN_BG, UITheme.NEUTRAL_BTN_HOVER, UITheme.NEUTRAL_BTN_TEXT);
+        ((ModernButton) btnExit).setBorderColor(UITheme.NEUTRAL_BTN_BORDER);
+        btnExit.setPreferredSize(new Dimension(100, 36));
 
         buttonPanel.add(btnLogin);
         buttonPanel.add(btnExit);
-        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        cardPanel.add(buttonPanel, BorderLayout.SOUTH);
 
-        add(mainPanel);
+        rootPanel.add(cardPanel);
+        add(rootPanel);
 
-        // Sự kiện
+        // Event Handlers
         btnLogin.addActionListener(e -> performLogin());
         btnExit.addActionListener(e -> System.exit(0));
 
-        // Nhấn Enter để đăng nhập
         KeyAdapter enterKeyAdapter = new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -106,7 +133,6 @@ public class LoginForm extends JFrame {
         txtUsername.addKeyListener(enterKeyAdapter);
         txtPassword.addKeyListener(enterKeyAdapter);
 
-        // Đặt mặc định nút Đăng nhập khi ấn Enter
         getRootPane().setDefaultButton(btnLogin);
     }
 
@@ -139,16 +165,16 @@ public class LoginForm extends JFrame {
                 mainFrame.setVisible(true);
             });
         } else {
-            JOptionPane.showMessageDialog(this, 
-                    "Tên đăng nhập hoặc mật khẩu không chính xác!\n(Tài khoản mặc định: admin / 123)", 
-                    "Đăng nhập thất bại", 
+            JOptionPane.showMessageDialog(this,
+                    "Tên đăng nhập hoặc mật khẩu không chính xác!\n(Tài khoản mặc định: admin / 123)",
+                    "Đăng nhập thất bại",
                     JOptionPane.ERROR_MESSAGE);
             txtPassword.setText("");
             txtPassword.requestFocus();
         }
     }
 
-    // Các hàm getter phục vụ kiểm thử
+    // Các hàm getter phục vụ kiểm thử tự động
     public JTextField getTxtUsername() {
         return txtUsername;
     }

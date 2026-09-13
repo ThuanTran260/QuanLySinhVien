@@ -76,6 +76,34 @@ public class DatabaseConnection {
             }
         }
 
+        // Ưu tiên cao nhất: Đọc từ Biến môi trường và System Properties (Bảo mật, không lo lộ lên Git)
+        String envUrl = System.getenv("DB_URL");
+        if (envUrl != null && !envUrl.trim().isEmpty()) {
+            dbUrl = envUrl.trim();
+        }
+        String sysUrl = System.getProperty("db.url");
+        if (sysUrl != null && !sysUrl.trim().isEmpty()) {
+            dbUrl = sysUrl.trim();
+        }
+
+        String envUser = System.getenv("DB_USER");
+        if (envUser != null && !envUser.trim().isEmpty()) {
+            dbUser = envUser.trim();
+        }
+        String sysUser = System.getProperty("db.user");
+        if (sysUser != null && !sysUser.trim().isEmpty()) {
+            dbUser = sysUser.trim();
+        }
+
+        String envPass = System.getenv("DB_PASSWORD");
+        if (envPass != null) {
+            dbPassword = envPass.trim();
+        }
+        String sysPass = System.getProperty("db.password");
+        if (sysPass != null) {
+            dbPassword = sysPass.trim();
+        }
+
         // Tải JDBC Driver
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");

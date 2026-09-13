@@ -8,7 +8,7 @@ Dự án ứng dụng Desktop hoàn chỉnh xây dựng bằng **Java Swing** k�
 Tuân thủ nguyên tắc chống over-engineering theo [0001-simplified-swing-architecture.md](docs/adr/0001-simplified-swing-architecture.md):
 ```
 src/main/java/com/quanlysinhvien/
-├── Main.java                          # Điểm khởi chạy ứng dụng (Nimbus Look & Feel)
+├── Main.java                          # Điểm khởi chạy ứng dụng (FlatLaf FlatMacLightLaf)
 ├── model/
 │   └── SinhVien.java                  # Entity Domain Model + Validation dữ liệu
 ├── dao/

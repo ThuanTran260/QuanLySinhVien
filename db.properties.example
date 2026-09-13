@@ -1,4 +1,4 @@
-# Cấu hình kết nối MySQL Database
+﻿# Cấu hình kết nối MySQL Database mẫu (Sao chép thành db.properties để sử dụng)
 db.url=jdbc:mysql://localhost:3306/QuanLySinhVien?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&useSSL=false
 db.user=root
 db.password=
