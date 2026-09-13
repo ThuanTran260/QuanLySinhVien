@@ -53,16 +53,12 @@ public class StudentManagementPanel extends JPanel {
     // State Machine
     private ViewState currentState = ViewState.NORMAL;
     private ViewState stateBeforeMaximize = ViewState.NORMAL;
-    private int density = 34;
+    private int density = 32;
 
-    // Components
-    private JPanel headerPanel;
-    private JPanel mainContentPanel;
-    private JPanel upperPanel;
-    private ModernCardPanel topCard;
-    private JPanel inputPanel;
-    private JPanel crudBtnBox;
-    private ModernCardPanel bottomCard;
+    // Components: 2-Column Split View
+    private JPanel centerSplitPanel;
+    private ModernCardPanel leftFormCard;
+    private ModernCardPanel rightTableCard;
     private JScrollPane scrollPane;
     private KpiCardsPanel kpiPanel;
 
@@ -93,8 +89,6 @@ public class StudentManagementPanel extends JPanel {
     private JButton btnStatistic;
     private JButton btnExportFile;
     private JButton btnImportFile;
-    private JButton btnToggleForm;
-    private JButton btnDensity;
     private JButton btnMaximize;
 
     private final DecimalFormat scoreFormat = new DecimalFormat("#0.0#",
@@ -106,204 +100,209 @@ public class StudentManagementPanel extends JPanel {
     }
 
     private void initUI() {
-        setLayout(new BorderLayout(10, 10));
+        setLayout(new BorderLayout(0, 10));
         setBackground(UITheme.CANVAS_BG);
         setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
 
-        // 1. Header Title
-        headerPanel = new JPanel();
-        headerPanel.setOpaque(false);
-        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
-
-        JLabel lblTitle = new JLabel("CHƯƠNG TRÌNH QUẢN LÝ SINH VIÊN", SwingConstants.CENTER);
-        lblTitle.setFont(UITheme.FONT_TITLE_LARGE);
-        lblTitle.setForeground(UITheme.TEXT_PRIMARY);
-        lblTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel lblSubtitle = new JLabel("Hệ thống quản lý thông tin sinh viên, điểm số và tra cứu nhanh", SwingConstants.CENTER);
-        lblSubtitle.setFont(UITheme.FONT_REGULAR);
-        lblSubtitle.setForeground(UITheme.TEXT_SECONDARY);
-        lblSubtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        headerPanel.add(lblTitle);
-        headerPanel.add(Box.createRigidArea(new Dimension(0, 2)));
-        headerPanel.add(lblSubtitle);
-        add(headerPanel, BorderLayout.NORTH);
-
-        // 2. Main Center Content
-        mainContentPanel = new JPanel(new BorderLayout(0, 10));
-        mainContentPanel.setOpaque(false);
-
-        // --- Upper Container: KPI Cards + Collapsible Form Card ---
-        upperPanel = new JPanel(new BorderLayout(0, 10));
-        upperPanel.setOpaque(false);
-
-        // 2.1 KPI Cards Panel
+        // 1. Top KPI Panel (4 KPI cards in a horizontal row)
         kpiPanel = new KpiCardsPanel();
-        upperPanel.add(kpiPanel, BorderLayout.NORTH);
+        add(kpiPanel, BorderLayout.NORTH);
 
-        // 2.2 Form Card (Collapsible)
-        topCard = new ModernCardPanel(new BorderLayout(10, 8), 16);
+        // 2. Center Split: 2-Column View (Left: Form, Right: Table Full Height)
+        centerSplitPanel = new JPanel(new BorderLayout(10, 0));
+        centerSplitPanel.setOpaque(false);
 
-        // Form Header Bar: Title + Toggle Collapse Button
-        JPanel formHeaderBar = new JPanel(new BorderLayout());
-        formHeaderBar.setOpaque(false);
+        // 2.1 Cột Trái (~330px): Form nhập liệu thông tin sinh viên
+        leftFormCard = new ModernCardPanel(new BorderLayout(0, 10), 16);
+        leftFormCard.setPreferredSize(new Dimension(330, 0));
 
-        JLabel lblFormTitle = new JLabel("Thông tin chi tiết sinh viên");
+        // Header tiêu đề Form
+        JPanel titlePanel = new JPanel();
+        titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
+        titlePanel.setOpaque(false);
+
+        JLabel lblFormTitle = new JLabel("Thông tin sinh viên");
         lblFormTitle.setFont(UITheme.FONT_TITLE_MEDIUM);
         lblFormTitle.setForeground(UITheme.TEXT_PRIMARY);
-        formHeaderBar.add(lblFormTitle, BorderLayout.WEST);
 
-        btnToggleForm = new ModernButton("Thu gọn Form ▲", UITheme.NEUTRAL_BTN_BG, UITheme.NEUTRAL_BTN_HOVER, UITheme.NEUTRAL_BTN_TEXT);
-        ((ModernButton) btnToggleForm).setBorderColor(UITheme.NEUTRAL_BTN_BORDER);
-        btnToggleForm.setPreferredSize(new Dimension(135, 28));
-        btnToggleForm.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        btnToggleForm.addActionListener(e -> toggleFormCollapse());
-        formHeaderBar.add(btnToggleForm, BorderLayout.EAST);
+        JLabel lblFormSub = new JLabel("Nhập và quản lý hồ sơ sinh viên");
+        lblFormSub.setFont(UITheme.FONT_SMALL);
+        lblFormSub.setForeground(UITheme.TEXT_MUTED);
 
-        topCard.add(formHeaderBar, BorderLayout.NORTH);
+        titlePanel.add(lblFormTitle);
+        titlePanel.add(Box.createRigidArea(new Dimension(0, 2)));
+        titlePanel.add(lblFormSub);
 
-        // Grid Inputs
-        inputPanel = new JPanel(new GridBagLayout());
-        inputPanel.setOpaque(false);
+        // 5 trường thông tin xếp dọc
+        JPanel fieldsPanel = new JPanel(new GridBagLayout());
+        fieldsPanel.setOpaque(false);
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(4, 8, 4, 8);
         gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        gbc.gridx = 0;
 
-        // Row 0: MaSV & Lop
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.12;
+        int row = 0;
+
+        // Mã SV
+        gbc.gridy = row++;
+        gbc.insets = new Insets(0, 0, 3, 0);
         JLabel lblMaSV = new JLabel("Mã Sinh Viên (*):");
         lblMaSV.setFont(UITheme.FONT_BOLD);
         lblMaSV.setForeground(UITheme.TEXT_PRIMARY);
-        inputPanel.add(lblMaSV, gbc);
+        fieldsPanel.add(lblMaSV, gbc);
 
-        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 0.38;
+        gbc.gridy = row++;
+        gbc.insets = new Insets(0, 0, 8, 0);
         txtMaSV = new JTextField();
         UITheme.styleTextField(txtMaSV);
-        inputPanel.add(txtMaSV, gbc);
+        txtMaSV.setPreferredSize(new Dimension(0, 32));
+        fieldsPanel.add(txtMaSV, gbc);
 
-        gbc.gridx = 2; gbc.gridy = 0; gbc.weightx = 0.12;
-        JLabel lblLop = new JLabel("Lớp (*):");
-        lblLop.setFont(UITheme.FONT_BOLD);
-        lblLop.setForeground(UITheme.TEXT_PRIMARY);
-        inputPanel.add(lblLop, gbc);
-
-        gbc.gridx = 3; gbc.gridy = 0; gbc.weightx = 0.38;
-        txtLop = new JTextField();
-        UITheme.styleTextField(txtLop);
-        inputPanel.add(txtLop, gbc);
-
-        // Row 1: HoTen & NgaySinh
-        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.12;
+        // Họ và Tên
+        gbc.gridy = row++;
+        gbc.insets = new Insets(0, 0, 3, 0);
         JLabel lblHoTen = new JLabel("Họ và Tên (*):");
         lblHoTen.setFont(UITheme.FONT_BOLD);
         lblHoTen.setForeground(UITheme.TEXT_PRIMARY);
-        inputPanel.add(lblHoTen, gbc);
+        fieldsPanel.add(lblHoTen, gbc);
 
-        gbc.gridx = 1; gbc.gridy = 1; gbc.weightx = 0.38;
+        gbc.gridy = row++;
+        gbc.insets = new Insets(0, 0, 8, 0);
         txtHoTen = new JTextField();
         UITheme.styleTextField(txtHoTen);
-        inputPanel.add(txtHoTen, gbc);
+        txtHoTen.setPreferredSize(new Dimension(0, 32));
+        fieldsPanel.add(txtHoTen, gbc);
 
-        gbc.gridx = 2; gbc.gridy = 1; gbc.weightx = 0.12;
+        // Lớp
+        gbc.gridy = row++;
+        gbc.insets = new Insets(0, 0, 3, 0);
+        JLabel lblLop = new JLabel("Lớp (*):");
+        lblLop.setFont(UITheme.FONT_BOLD);
+        lblLop.setForeground(UITheme.TEXT_PRIMARY);
+        fieldsPanel.add(lblLop, gbc);
+
+        gbc.gridy = row++;
+        gbc.insets = new Insets(0, 0, 8, 0);
+        txtLop = new JTextField();
+        UITheme.styleTextField(txtLop);
+        txtLop.setPreferredSize(new Dimension(0, 32));
+        fieldsPanel.add(txtLop, gbc);
+
+        // Ngày Sinh
+        gbc.gridy = row++;
+        gbc.insets = new Insets(0, 0, 3, 0);
         JLabel lblNgaySinh = new JLabel("Ngày Sinh (yyyy-MM-dd):");
         lblNgaySinh.setFont(UITheme.FONT_BOLD);
         lblNgaySinh.setForeground(UITheme.TEXT_PRIMARY);
-        inputPanel.add(lblNgaySinh, gbc);
+        fieldsPanel.add(lblNgaySinh, gbc);
 
-        gbc.gridx = 3; gbc.gridy = 1; gbc.weightx = 0.38;
+        gbc.gridy = row++;
+        gbc.insets = new Insets(0, 0, 8, 0);
         txtNgaySinh = new JTextField();
         UITheme.styleTextField(txtNgaySinh);
-        inputPanel.add(txtNgaySinh, gbc);
+        txtNgaySinh.setPreferredSize(new Dimension(0, 32));
+        fieldsPanel.add(txtNgaySinh, gbc);
 
-        // Row 2: DiemTB & Notes
-        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0.12;
+        // Điểm TB
+        gbc.gridy = row++;
+        gbc.insets = new Insets(0, 0, 3, 0);
         JLabel lblDiemTB = new JLabel("Điểm Trung Bình (0-10):");
         lblDiemTB.setFont(UITheme.FONT_BOLD);
         lblDiemTB.setForeground(UITheme.TEXT_PRIMARY);
-        inputPanel.add(lblDiemTB, gbc);
+        fieldsPanel.add(lblDiemTB, gbc);
 
-        gbc.gridx = 1; gbc.gridy = 2; gbc.weightx = 0.38;
+        gbc.gridy = row++;
+        gbc.insets = new Insets(0, 0, 4, 0);
         txtDiemTB = new JTextField();
         UITheme.styleTextField(txtDiemTB);
-        inputPanel.add(txtDiemTB, gbc);
+        txtDiemTB.setPreferredSize(new Dimension(0, 32));
+        fieldsPanel.add(txtDiemTB, gbc);
 
-        gbc.gridx = 2; gbc.gridy = 2; gbc.gridwidth = 2;
-        JLabel lblNote = new JLabel("(*) Bắt buộc | Điểm: 0.0 - 10.0 | Ngày sinh: ví dụ 2003-05-15");
+        // Ghi chú
+        gbc.gridy = row++;
+        gbc.insets = new Insets(2, 0, 2, 0);
+        JLabel lblNote = new JLabel("(*) Bắt buộc | Điểm: 0.0 - 10.0");
         lblNote.setFont(UITheme.FONT_SMALL);
         lblNote.setForeground(UITheme.TEXT_MUTED);
-        inputPanel.add(lblNote, gbc);
-        gbc.gridwidth = 1;
+        fieldsPanel.add(lblNote, gbc);
 
-        topCard.add(inputPanel, BorderLayout.CENTER);
-
-        // Action CRUD Buttons Bar
-        crudBtnBox = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 6));
-        crudBtnBox.setOpaque(false);
+        // Cụm 4 nút CRUD chia lưới 2x2 cân đối
+        JPanel btnGrid = new JPanel(new GridLayout(2, 2, 8, 8));
+        btnGrid.setOpaque(false);
 
         btnAdd = new ModernButton("Thêm mới", UITheme.PRIMARY);
-        btnAdd.setPreferredSize(new Dimension(115, 32));
+        btnAdd.setPreferredSize(new Dimension(0, 34));
 
-        btnUpdate = new ModernButton("Cập nhật (Sửa)", UITheme.SUCCESS);
-        btnUpdate.setPreferredSize(new Dimension(135, 32));
+        btnUpdate = new ModernButton("Cập nhật", UITheme.SUCCESS);
+        btnUpdate.setPreferredSize(new Dimension(0, 34));
 
         btnDelete = new ModernButton("Xóa sinh viên", UITheme.DANGER);
-        btnDelete.setPreferredSize(new Dimension(125, 32));
+        btnDelete.setPreferredSize(new Dimension(0, 34));
 
         btnClear = new ModernButton("Làm mới form", UITheme.NEUTRAL_BTN_BG, UITheme.NEUTRAL_BTN_HOVER, UITheme.NEUTRAL_BTN_TEXT);
         ((ModernButton) btnClear).setBorderColor(UITheme.NEUTRAL_BTN_BORDER);
-        btnClear.setPreferredSize(new Dimension(125, 32));
+        btnClear.setPreferredSize(new Dimension(0, 34));
 
-        crudBtnBox.add(btnAdd);
-        crudBtnBox.add(btnUpdate);
-        crudBtnBox.add(btnDelete);
-        crudBtnBox.add(btnClear);
+        btnGrid.add(btnAdd);
+        btnGrid.add(btnUpdate);
+        btnGrid.add(btnDelete);
+        btnGrid.add(btnClear);
 
-        topCard.add(crudBtnBox, BorderLayout.SOUTH);
-        upperPanel.add(topCard, BorderLayout.CENTER);
+        // Body Form bên trái
+        JPanel formBody = new JPanel();
+        formBody.setLayout(new BoxLayout(formBody, BoxLayout.Y_AXIS));
+        formBody.setOpaque(false);
 
-        mainContentPanel.add(upperPanel, BorderLayout.NORTH);
+        formBody.add(titlePanel);
+        formBody.add(Box.createRigidArea(new Dimension(0, 10)));
+        formBody.add(fieldsPanel);
+        formBody.add(Box.createRigidArea(new Dimension(0, 10)));
+        formBody.add(btnGrid);
 
-        // --- Bottom Card: 2-Tier Toolbar & Data Table ---
-        bottomCard = new ModernCardPanel(new BorderLayout(6, 6), 16);
+        JScrollPane formScroll = new JScrollPane(formBody);
+        formScroll.setBorder(null);
+        formScroll.setOpaque(false);
+        formScroll.getViewport().setOpaque(false);
+        formScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        formScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
 
-        // Toolbar Panel: 2 Tầng Cố Định Chiều Cao (Chống wrap layout khi co giãn cửa sổ)
-        JPanel toolBarPanel = new JPanel(new GridLayout(2, 1, 0, 4));
+        leftFormCard.add(formScroll, BorderLayout.CENTER);
+        centerSplitPanel.add(leftFormCard, BorderLayout.WEST);
+
+        // 2.2 Cột Phải: Bảng sinh viên Full Height + Toolbar 1 hàng
+        rightTableCard = new ModernCardPanel(new BorderLayout(0, 8), 14);
+
+        // Toolbar Container 1 hàng duy nhất: Phía tây/giữa là các công cụ cuộn ngang nếu hẹp, Phía đông là nút Phóng to luôn cố định
+        JPanel toolBarContainer = new JPanel(new BorderLayout(8, 0));
+        toolBarContainer.setOpaque(false);
+
+        // Toolbar Panel chứa các nút chức năng
+        JPanel toolBarPanel = new JPanel();
+        toolBarPanel.setLayout(new BoxLayout(toolBarPanel, BoxLayout.X_AXIS));
         toolBarPanel.setOpaque(false);
 
-        // TẦNG 1: Tìm kiếm & Sắp xếp
-        JPanel tier1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
-        tier1.setOpaque(false);
-
-        JLabel lblSearchBy = new JLabel("Tìm theo:");
-        lblSearchBy.setFont(UITheme.FONT_BOLD);
-        lblSearchBy.setForeground(UITheme.TEXT_PRIMARY);
-        tier1.add(lblSearchBy);
-
+        // Nhóm Tìm kiếm
         cbSearchCriteria = new JComboBox<>(new String[]{"Tất cả", "Mã SV", "Họ tên", "Lớp"});
         UITheme.styleComboBox(cbSearchCriteria);
-        tier1.add(cbSearchCriteria);
+        setFixedControlSize(cbSearchCriteria, 80, 30);
+        cbSearchCriteria.setAlignmentY(Component.CENTER_ALIGNMENT);
 
-        txtSearch = new JTextField(12);
+        txtSearch = new JTextField();
         UITheme.styleTextField(txtSearch);
-        tier1.add(txtSearch);
+        setFixedControlSize(txtSearch, 100, 30);
+        txtSearch.setAlignmentY(Component.CENTER_ALIGNMENT);
+        txtSearch.setToolTipText("Nhập từ khóa tìm kiếm...");
 
         btnSearch = new ModernButton("Tìm kiếm", UITheme.PRIMARY);
-        btnSearch.setPreferredSize(new Dimension(90, 30));
-        tier1.add(btnSearch);
+        setFixedControlSize(btnSearch, 80, 30);
+        btnSearch.setAlignmentY(Component.CENTER_ALIGNMENT);
 
         btnRefresh = new ModernButton("Tất cả", UITheme.NEUTRAL_BTN_BG, UITheme.NEUTRAL_BTN_HOVER, UITheme.NEUTRAL_BTN_TEXT);
         ((ModernButton) btnRefresh).setBorderColor(UITheme.NEUTRAL_BTN_BORDER);
-        btnRefresh.setPreferredSize(new Dimension(75, 30));
-        tier1.add(btnRefresh);
+        setFixedControlSize(btnRefresh, 65, 30);
+        btnRefresh.setAlignmentY(Component.CENTER_ALIGNMENT);
 
-        tier1.add(createToolbarSeparator());
-
-        JLabel lblSortBy = new JLabel("Sắp xếp:");
-        lblSortBy.setFont(UITheme.FONT_BOLD);
-        lblSortBy.setForeground(UITheme.TEXT_PRIMARY);
-        tier1.add(lblSortBy);
-
+        // Nhóm Sắp xếp
         cbSort = new JComboBox<>(new String[]{
                 "Tên (A-Z)",
                 "Tên (Z-A)",
@@ -315,52 +314,71 @@ public class StudentManagementPanel extends JPanel {
                 "Mã SV (Giảm dần)"
         });
         UITheme.styleComboBox(cbSort);
-        tier1.add(cbSort);
+        setFixedControlSize(cbSort, 125, 30);
+        cbSort.setAlignmentY(Component.CENTER_ALIGNMENT);
 
         btnSort = new ModernButton("Sắp xếp", UITheme.PRIMARY);
-        btnSort.setPreferredSize(new Dimension(85, 30));
-        tier1.add(btnSort);
+        setFixedControlSize(btnSort, 75, 30);
+        btnSort.setAlignmentY(Component.CENTER_ALIGNMENT);
 
-        toolBarPanel.add(tier1);
-
-        // TẦNG 2: Thống kê, File IO, Mật độ dòng & Phóng to
-        JPanel tier2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
-        tier2.setOpaque(false);
-
+        // Thống kê & File IO
         btnStatistic = new ModernButton("Thống kê", new Color(0x7C, 0x3A, 0xED));
-        btnStatistic.setPreferredSize(new Dimension(95, 30));
-        tier2.add(btnStatistic);
+        setFixedControlSize(btnStatistic, 80, 30);
+        btnStatistic.setAlignmentY(Component.CENTER_ALIGNMENT);
 
-        btnExportFile = new ModernButton("Xuất Text File", UITheme.NEUTRAL_BTN_BG, UITheme.NEUTRAL_BTN_HOVER, UITheme.NEUTRAL_BTN_TEXT);
+        btnExportFile = new ModernButton("Xuất File", UITheme.NEUTRAL_BTN_BG, UITheme.NEUTRAL_BTN_HOVER, UITheme.NEUTRAL_BTN_TEXT);
         ((ModernButton) btnExportFile).setBorderColor(UITheme.NEUTRAL_BTN_BORDER);
-        btnExportFile.setPreferredSize(new Dimension(115, 30));
-        tier2.add(btnExportFile);
+        setFixedControlSize(btnExportFile, 80, 30);
+        btnExportFile.setAlignmentY(Component.CENTER_ALIGNMENT);
 
-        btnImportFile = new ModernButton("Nạp từ File", UITheme.NEUTRAL_BTN_BG, UITheme.NEUTRAL_BTN_HOVER, UITheme.NEUTRAL_BTN_TEXT);
+        btnImportFile = new ModernButton("Nạp File", UITheme.NEUTRAL_BTN_BG, UITheme.NEUTRAL_BTN_HOVER, UITheme.NEUTRAL_BTN_TEXT);
         ((ModernButton) btnImportFile).setBorderColor(UITheme.NEUTRAL_BTN_BORDER);
-        btnImportFile.setPreferredSize(new Dimension(100, 30));
-        tier2.add(btnImportFile);
+        setFixedControlSize(btnImportFile, 75, 30);
+        btnImportFile.setAlignmentY(Component.CENTER_ALIGNMENT);
 
-        tier2.add(createToolbarSeparator());
-
-        // Density Button (26px ↔ 34px)
-        btnDensity = new ModernButton("Mật độ: 34px", UITheme.NEUTRAL_BTN_BG, UITheme.NEUTRAL_BTN_HOVER, UITheme.NEUTRAL_BTN_TEXT);
-        ((ModernButton) btnDensity).setBorderColor(UITheme.NEUTRAL_BTN_BORDER);
-        btnDensity.setPreferredSize(new Dimension(105, 30));
-        btnDensity.setToolTipText("Chuyển đổi giữa dòng thoáng (34px) và dòng thu gọn (26px)");
-        btnDensity.addActionListener(e -> toggleDensity());
-        tier2.add(btnDensity);
-
-        // Maximize Button [⛶]
+        // Nút Phóng to [⛶] - Luôn ghim ở góc phải trên cùng, không bao giờ bị cuộn che mất
         btnMaximize = new ModernButton("Phóng to [⛶]", new Color(0x0E, 0xA5, 0xE9));
-        btnMaximize.setPreferredSize(new Dimension(110, 30));
+        setFixedControlSize(btnMaximize, 105, 30);
+        btnMaximize.setAlignmentY(Component.CENTER_ALIGNMENT);
         btnMaximize.setToolTipText("Phóng to bảng chiếm 100% diện tích (Phím tắt: F11 vào/ra, Esc thoát)");
         btnMaximize.addActionListener(e -> toggleMaximize());
-        tier2.add(btnMaximize);
 
-        toolBarPanel.add(tier2);
+        // Ghép vào thanh công cụ cuộn ngang
+        toolBarPanel.add(cbSearchCriteria);
+        toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        toolBarPanel.add(txtSearch);
+        toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        toolBarPanel.add(btnSearch);
+        toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        toolBarPanel.add(btnRefresh);
+        toolBarPanel.add(Box.createRigidArea(new Dimension(6, 0)));
+        toolBarPanel.add(createToolbarSeparator());
+        toolBarPanel.add(Box.createRigidArea(new Dimension(6, 0)));
+        toolBarPanel.add(cbSort);
+        toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        toolBarPanel.add(btnSort);
+        toolBarPanel.add(Box.createRigidArea(new Dimension(6, 0)));
+        toolBarPanel.add(createToolbarSeparator());
+        toolBarPanel.add(Box.createRigidArea(new Dimension(6, 0)));
+        toolBarPanel.add(btnStatistic);
+        toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        toolBarPanel.add(btnExportFile);
+        toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        toolBarPanel.add(btnImportFile);
 
-        bottomCard.add(toolBarPanel, BorderLayout.NORTH);
+        JScrollPane toolBarScroll = new JScrollPane(toolBarPanel);
+        toolBarScroll.setBorder(null);
+        toolBarScroll.setOpaque(false);
+        toolBarScroll.getViewport().setOpaque(false);
+        toolBarScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        toolBarScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+        toolBarScroll.getHorizontalScrollBar().setPreferredSize(new Dimension(0, 7));
+
+        toolBarContainer.setPreferredSize(new Dimension(0, 38));
+        toolBarContainer.add(toolBarScroll, BorderLayout.CENTER);
+        toolBarContainer.add(btnMaximize, BorderLayout.EAST);
+
+        rightTableCard.add(toolBarContainer, BorderLayout.NORTH);
 
         // --- Table Section ---
         tableModel = new DefaultTableModel(COLUMN_NAMES, 0) {
@@ -400,20 +418,31 @@ public class StudentManagementPanel extends JPanel {
         scrollPane.setBorder(BorderFactory.createLineBorder(UITheme.BORDER_COLOR, 1));
         scrollPane.getViewport().setBackground(Color.WHITE);
 
-        bottomCard.add(scrollPane, BorderLayout.CENTER);
-        mainContentPanel.add(bottomCard, BorderLayout.CENTER);
+        rightTableCard.add(scrollPane, BorderLayout.CENTER);
+        centerSplitPanel.add(rightTableCard, BorderLayout.CENTER);
 
-        add(mainContentPanel, BorderLayout.CENTER);
+        add(centerSplitPanel, BorderLayout.CENTER);
 
         // Event Handlers & Key Bindings
         setupEventHandlers();
         setupKeyBindings();
     }
 
+    private void setFixedControlSize(JComponent comp, int width, int height) {
+        Dimension d = new Dimension(width, height);
+        comp.setPreferredSize(d);
+        comp.setMaximumSize(d);
+        comp.setMinimumSize(d);
+    }
+
     private JComponent createToolbarSeparator() {
         JSeparator sep = new JSeparator(SwingConstants.VERTICAL);
-        sep.setPreferredSize(new Dimension(2, 22));
+        Dimension d = new Dimension(2, 22);
+        sep.setPreferredSize(d);
+        sep.setMaximumSize(d);
+        sep.setMinimumSize(d);
         sep.setForeground(UITheme.BORDER_COLOR);
+        sep.setAlignmentY(Component.CENTER_ALIGNMENT);
         return sep;
     }
 
@@ -622,20 +651,6 @@ public class StudentManagementPanel extends JPanel {
         });
     }
 
-    public void toggleDensity() {
-        withAnimationDisabled(() -> {
-            if (density == 34) {
-                density = 26;
-                btnDensity.setText("Mật độ: 26px");
-            } else {
-                density = 34;
-                btnDensity.setText("Mật độ: 34px");
-            }
-            tblSinhVien.setRowHeight(density);
-            tblSinhVien.repaint();
-        });
-    }
-
     private void setViewState(ViewState newState) {
         if (currentState == newState) return;
 
@@ -646,26 +661,18 @@ public class StudentManagementPanel extends JPanel {
 
         switch (currentState) {
             case NORMAL:
-                headerPanel.setVisible(true);
-                upperPanel.setVisible(true);
                 kpiPanel.setVisible(true);
-                inputPanel.setVisible(true);
-                crudBtnBox.setVisible(true);
-                btnToggleForm.setText("Thu gọn Form ▲");
+                leftFormCard.setVisible(true);
                 btnMaximize.setText("Phóng to [⛶]");
                 break;
             case FORM_COLLAPSED:
-                headerPanel.setVisible(true);
-                upperPanel.setVisible(true);
                 kpiPanel.setVisible(true);
-                inputPanel.setVisible(false);
-                crudBtnBox.setVisible(false);
-                btnToggleForm.setText("Mở rộng Form ▼");
+                leftFormCard.setVisible(false);
                 btnMaximize.setText("Phóng to [⛶]");
                 break;
             case MAXIMIZED:
-                headerPanel.setVisible(false);
-                upperPanel.setVisible(false);
+                kpiPanel.setVisible(false);
+                leftFormCard.setVisible(false);
                 btnMaximize.setText("Thu nhỏ [⛶]");
                 break;
         }
@@ -1190,6 +1197,18 @@ public class StudentManagementPanel extends JPanel {
         return kpiPanel;
     }
 
+    public ModernCardPanel getLeftFormCard() {
+        return leftFormCard;
+    }
+
+    public ModernCardPanel getRightTableCard() {
+        return rightTableCard;
+    }
+
+    public JButton getBtnMaximize() {
+        return btnMaximize;
+    }
+
     public boolean isFormCollapsed() {
         return currentState == ViewState.FORM_COLLAPSED;
     }
@@ -1198,8 +1217,36 @@ public class StudentManagementPanel extends JPanel {
         return currentState == ViewState.MAXIMIZED;
     }
 
+    public JTextField getTxtSearch() {
+        return txtSearch;
+    }
+
+    public JButton getBtnSearch() {
+        return btnSearch;
+    }
+
+    public JComboBox<String> getCbSearchCriteria() {
+        return cbSearchCriteria;
+    }
+
+    public JButton getBtnRefresh() {
+        return btnRefresh;
+    }
+
+    public JButton getBtnStatistic() {
+        return btnStatistic;
+    }
+
+    public JButton getBtnExportFile() {
+        return btnExportFile;
+    }
+
+    public JButton getBtnImportFile() {
+        return btnImportFile;
+    }
+
     public int getDensity() {
-        return density;
+        return tblSinhVien != null ? tblSinhVien.getRowHeight() : density;
     }
 
     public List<SinhVien> getMasterList() {

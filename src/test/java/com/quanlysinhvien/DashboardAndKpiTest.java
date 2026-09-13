@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -134,8 +135,8 @@ public class DashboardAndKpiTest {
     }
 
     @Test
-    @DisplayName("Kiểm tra StudentManagementPanel: State Machine (Normal, Collapsed, Maximized), Density và Maximize không bung form")
-    void testStudentManagementPanelStatesAndDensity() {
+    @DisplayName("Kiểm tra StudentManagementPanel: Bố cục 2 cột (Split View), Maximize View và khóa Form")
+    void testStudentManagementPanelStatesAndMaximize() {
         Assumptions.assumeFalse(GraphicsEnvironment.isHeadless(), "Bỏ qua GUI trong headless");
 
         StudentManagementPanel panel = new StudentManagementPanel();
@@ -144,31 +145,35 @@ public class DashboardAndKpiTest {
         assertNotNull(panel.getKpiPanel());
         assertEquals(84, panel.getKpiPanel().getTotalStudents());
 
-        // Trạng thái ban đầu
-        assertFalse(panel.isFormCollapsed());
+        // Trạng thái ban đầu: Bố cục 2 cột (Normal)
         assertFalse(panel.isMaximized());
-        assertEquals(34, panel.getDensity());
-
-        // 1. Toggle Form Collapse
-        panel.toggleFormCollapse();
-        assertTrue(panel.isFormCollapsed());
-        assertFalse(panel.isMaximized());
-
-        panel.toggleFormCollapse();
         assertFalse(panel.isFormCollapsed());
+        assertEquals(32, panel.getTable().getRowHeight(), "Chiều cao dòng tiêu chuẩn phải là 32px thoáng đãng");
+        assertNotNull(panel.getLeftFormCard());
+        assertNotNull(panel.getRightTableCard());
+        assertNotNull(panel.getBtnMaximize());
+        assertTrue(panel.getKpiPanel().isVisible(), "Hàng KPI phải hiển thị ở chế độ Normal");
+        assertTrue(panel.getLeftFormCard().isVisible(), "Cột Form bên trái phải hiển thị ở chế độ Normal");
+        assertTrue(panel.getRightTableCard().isVisible(), "Cột Bảng bên phải phải hiển thị ở chế độ Normal");
 
-        // 2. Toggle Density
-        panel.toggleDensity();
-        assertEquals(26, panel.getDensity());
-        assertEquals(26, panel.getTable().getRowHeight());
+        // 1. Kiểm tra Toggle Form Collapse
+        panel.toggleFormCollapse();
+        assertTrue(panel.isFormCollapsed(), "Phải chuyển sang trạng thái FORM_COLLAPSED");
+        assertFalse(panel.isMaximized(), "Không được nhầm lẫn với trạng thái MAXIMIZED");
+        assertFalse(panel.getLeftFormCard().isVisible(), "Khi Form Collapse, cột form bên trái phải ẩn");
+        assertTrue(panel.getKpiPanel().isVisible(), "Khi Form Collapse, KPI vẫn phải hiển thị");
 
-        panel.toggleDensity();
-        assertEquals(34, panel.getDensity());
-        assertEquals(34, panel.getTable().getRowHeight());
+        panel.toggleFormCollapse();
+        assertFalse(panel.isFormCollapsed(), "Phải khôi phục về trạng thái NORMAL");
+        assertTrue(panel.getLeftFormCard().isVisible(), "Khi mở lại Form, cột form bên trái phải hiện");
 
-        // 3. Toggle Maximize (F11 / Esc)
+        // 2. Phóng to Bảng (Maximize View - F11 / Esc)
         panel.toggleMaximize();
         assertTrue(panel.isMaximized());
+        assertFalse(panel.isFormCollapsed(), "Khi Maximize, không được coi là Form Collapsed");
+        assertFalse(panel.getKpiPanel().isVisible(), "Khi Maximize, kpiPanel phải ẩn");
+        assertFalse(panel.getLeftFormCard().isVisible(), "Khi Maximize, cột Form bên trái phải ẩn");
+        assertTrue(panel.getRightTableCard().isVisible(), "Khi Maximize, cột Bảng bên phải chiếm trọn 100% diện tích");
 
         // QUYẾT ĐỊNH CHỐT: Khi ở chế độ Maximize, chọn dòng KHÔNG tự ý bung Form
         panel.getTable().setRowSelectionInterval(1, 1);
@@ -176,16 +181,23 @@ public class DashboardAndKpiTest {
         assertFalse(panel.getTxtMaSV().isEditable(), "Mã SV vẫn phải bị khóa khi chọn dòng trong Maximize");
         assertFalse(panel.getTxtMaSV().getText().trim().isEmpty());
 
-        // Thoát Maximize
+        // Thoát Maximize, khôi phục lại 2 cột
         panel.toggleMaximize();
         assertFalse(panel.isMaximized());
+        assertFalse(panel.isFormCollapsed());
+        assertTrue(panel.getKpiPanel().isVisible(), "Khi thoát Maximize, kpiPanel phải hiện lại");
+        assertTrue(panel.getLeftFormCard().isVisible(), "Khi thoát Maximize, cột Form bên trái phải hiện lại");
 
         // Kiểm tra phím tắt F11 và Esc trong ActionMap
         Action toggleAction = panel.getActionMap().get("toggleMaximize");
         assertNotNull(toggleAction, "Phải đăng ký Action toggleMaximize");
+        toggleAction.actionPerformed(new ActionEvent(panel, 0, "toggleMaximize"));
+        assertTrue(panel.isMaximized(), "Phím F11 phải kích hoạt chế độ Maximize");
 
         Action exitAction = panel.getActionMap().get("exitMaximize");
         assertNotNull(exitAction, "Phải đăng ký Action exitMaximize");
+        exitAction.actionPerformed(new ActionEvent(panel, 0, "exitMaximize"));
+        assertFalse(panel.isMaximized(), "Phím Esc phải thoát khỏi chế độ Maximize");
     }
 
     @Test
@@ -294,10 +306,16 @@ public class DashboardAndKpiTest {
         assertTrue(panel.isMaximized(), "Sắp xếp không được làm thoát chế độ Maximize");
         assertEquals(84, panel.getTable().getRowCount());
 
-        // Đổi mật độ dòng khi đang Maximize
-        panel.toggleDensity();
-        assertEquals(26, panel.getDensity());
-        assertTrue(panel.isMaximized(), "Đổi mật độ dòng không được làm thoát chế độ Maximize");
+        // Thực hiện tìm kiếm khi đang Maximize
+        panel.getTxtSearch().setText("Nguyen");
+        panel.getBtnSearch().doClick();
+        assertTrue(panel.isMaximized(), "Tìm kiếm không được làm thoát chế độ Maximize");
+        assertTrue(panel.getTable().getRowCount() > 0, "Tìm kiếm phải trả về kết quả");
+
+        // Bấm Làm mới danh sách khi đang Maximize
+        panel.getBtnRefresh().doClick();
+        assertTrue(panel.isMaximized(), "Làm mới danh sách không được làm thoát chế độ Maximize");
+        assertEquals(84, panel.getTable().getRowCount());
 
         // Nhấn phím Esc để thoát Maximize
         Action exitAction = panel.getActionMap().get("exitMaximize");
@@ -348,7 +366,7 @@ public class DashboardAndKpiTest {
     }
 
     @Test
-    @DisplayName("Kiểm tra SlideTabbedPane tự động vô hiệu hóa animation khi collapse/maximize/density")
+    @DisplayName("Kiểm tra SlideTabbedPane tự động vô hiệu hóa animation khi collapse/maximize/sidebar")
     void testAnimationDisabledDuringLayoutTransitions() {
         Assumptions.assumeFalse(GraphicsEnvironment.isHeadless(), "Bỏ qua GUI trong headless");
 
@@ -366,14 +384,62 @@ public class DashboardAndKpiTest {
         panel.toggleMaximize();
         assertTrue(panel.isMaximized());
 
-        // Toggle density
-        panel.toggleDensity();
-        assertEquals(26, panel.getDensity());
+        // Thoát maximize
+        panel.toggleMaximize();
+        assertFalse(panel.isMaximized());
 
         // Toggle sidebar
         frame.toggleSidebar();
         assertFalse(frame.getSidebar().isExpanded());
 
         frame.dispose();
+    }
+
+    @Test
+    @DisplayName("Kiểm tra chuyển đổi trạng thái phức hợp: Collapse Form -> Maximize -> Restore Collapse -> Normal")
+    void testFormCollapseAndMaximizeCompoundTransitions() {
+        Assumptions.assumeFalse(GraphicsEnvironment.isHeadless(), "Bỏ qua GUI trong headless");
+
+        StudentManagementPanel panel = new StudentManagementPanel();
+        assertFalse(panel.isFormCollapsed());
+        assertFalse(panel.isMaximized());
+        assertEquals("Phóng to [⛶]", panel.getBtnMaximize().getText());
+
+        // 1. Thu gọn Form (Collapse)
+        panel.toggleFormCollapse();
+        assertTrue(panel.isFormCollapsed());
+        assertFalse(panel.isMaximized());
+        assertFalse(panel.getLeftFormCard().isVisible());
+        assertTrue(panel.getKpiPanel().isVisible());
+
+        // 2. Từ Collapse phóng to Maximize
+        panel.toggleMaximize();
+        assertTrue(panel.isMaximized());
+        assertFalse(panel.isFormCollapsed(), "Trong Maximize không được tính là Form Collapsed");
+        assertFalse(panel.getKpiPanel().isVisible());
+        assertFalse(panel.getLeftFormCard().isVisible());
+        assertEquals("Thu nhỏ [⛶]", panel.getBtnMaximize().getText());
+
+        // 3. Stress test: Toggle Maximize 10 lần liên tục
+        for (int i = 0; i < 10; i++) {
+            panel.toggleMaximize();
+        }
+        // Sau 10 lần (chẵn), trở lại trạng thái Maximize
+        assertTrue(panel.isMaximized());
+
+        // 4. Thoát Maximize -> Phải khôi phục lại trạng thái trước đó (FORM_COLLAPSED)
+        panel.toggleMaximize();
+        assertFalse(panel.isMaximized());
+        assertTrue(panel.isFormCollapsed(), "Khi thoát Maximize phải khôi phục lại trạng thái FORM_COLLAPSED trước đó");
+        assertFalse(panel.getLeftFormCard().isVisible());
+        assertTrue(panel.getKpiPanel().isVisible());
+        assertEquals("Phóng to [⛶]", panel.getBtnMaximize().getText());
+
+        // 5. Mở lại Form -> Trở về NORMAL
+        panel.toggleFormCollapse();
+        assertFalse(panel.isFormCollapsed());
+        assertFalse(panel.isMaximized());
+        assertTrue(panel.getLeftFormCard().isVisible());
+        assertTrue(panel.getKpiPanel().isVisible());
     }
 }
