@@ -43,8 +43,20 @@ public class ModernSidebar extends JPanel {
 
     private final Map<MenuId, NavButton> navButtons = new EnumMap<>(MenuId.class);
     private final JLabel lblLogoText = new JLabel("QL SINH VIÊN");
-    private final JLabel lblLogoIcon = new JLabel("🎓", SwingConstants.CENTER);
-    private final JButton btnToggle = new JButton("◀  Thu gọn");
+    private final JLabel lblLogoIcon = new JLabel("", SwingConstants.CENTER);
+    private final JButton btnToggle = new JButton() {
+        @Override
+        protected void paintComponent(Graphics g) {
+            if (getModel().isRollover()) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(0xF1, 0xF5, 0xF9));
+                g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 8, 8);
+                g2.dispose();
+            }
+            super.paintComponent(g);
+        }
+    };
 
     public ModernSidebar() {
         initUI();
@@ -66,8 +78,11 @@ public class ModernSidebar extends JPanel {
                 BorderFactory.createEmptyBorder(0, 12, 0, 12)
         ));
 
-        lblLogoIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 22));
+        lblLogoIcon.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblLogoIcon.setPreferredSize(new Dimension(40, 56));
+        lblLogoIcon.setHorizontalAlignment(SwingConstants.CENTER);
+        lblLogoIcon.setIcon(SidebarIcons.createLogoIcon(26));
+        lblLogoIcon.setText("");
 
         lblLogoText.setFont(new Font("Segoe UI", Font.BOLD, 15));
         lblLogoText.setForeground(UITheme.PRIMARY);
@@ -82,10 +97,10 @@ public class ModernSidebar extends JPanel {
         menuContainer.setLayout(new BoxLayout(menuContainer, BoxLayout.Y_AXIS));
         menuContainer.setBorder(BorderFactory.createEmptyBorder(12, 6, 12, 6));
 
-        addNavItem(menuContainer, MenuId.SINH_VIEN, "Sinh Viên", "🎓", "SV");
-        addNavItem(menuContainer, MenuId.MAY_TINH, "Máy Tính", "🧮", "CALC");
-        addNavItem(menuContainer, MenuId.THONG_KE, "Thống Kê", "📊", "STAT");
-        addNavItem(menuContainer, MenuId.GIOI_THIEU, "Giới Thiệu", "ℹ️", "INFO");
+        addNavItem(menuContainer, MenuId.SINH_VIEN, "Sinh Viên", SidebarIcons.createStudentIcon(20), "SV");
+        addNavItem(menuContainer, MenuId.MAY_TINH, "Máy Tính", SidebarIcons.createCalculatorIcon(20), "CALC");
+        addNavItem(menuContainer, MenuId.THONG_KE, "Thống Kê", SidebarIcons.createChartIcon(20), "STAT");
+        addNavItem(menuContainer, MenuId.GIOI_THIEU, "Giới Thiệu", SidebarIcons.createAboutIcon(20), "INFO");
 
         add(menuContainer, BorderLayout.CENTER);
 
@@ -102,10 +117,18 @@ public class ModernSidebar extends JPanel {
         btnToggle.setForeground(UITheme.TEXT_SECONDARY);
         btnToggle.setFocusPainted(false);
         btnToggle.setContentAreaFilled(false);
-        btnToggle.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
+        btnToggle.setOpaque(false);
         btnToggle.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnToggle.setRolloverEnabled(true);
         btnToggle.setToolTipText("Thu gọn / Mở rộng thanh điều hướng");
         btnToggle.addActionListener(e -> toggle());
+        btnToggle.addChangeListener(e -> {
+            if (btnToggle.getModel().isRollover()) {
+                btnToggle.setForeground(UITheme.PRIMARY);
+            } else {
+                btnToggle.setForeground(UITheme.TEXT_SECONDARY);
+            }
+        });
 
         footerPanel.add(btnToggle, BorderLayout.CENTER);
         add(footerPanel, BorderLayout.SOUTH);
@@ -113,7 +136,7 @@ public class ModernSidebar extends JPanel {
         updateItemsAppearance();
     }
 
-    private void addNavItem(JPanel container, MenuId id, String label, String icon, String shortCode) {
+    private void addNavItem(JPanel container, MenuId id, String label, Icon icon, String shortCode) {
         NavButton btn = new NavButton(id, label, icon, shortCode);
         btn.addActionListener(e -> {
             setActive(id);
@@ -124,6 +147,10 @@ public class ModernSidebar extends JPanel {
         navButtons.put(id, btn);
         container.add(btn);
         container.add(Box.createRigidArea(new Dimension(0, 4)));
+    }
+
+    private void addNavItem(JPanel container, MenuId id, String label, String iconText, String shortCode) {
+        addNavItem(container, id, label, SidebarIcons.getNavIcon(id, 20), shortCode);
     }
 
     public void toggle() {
@@ -180,7 +207,11 @@ public class ModernSidebar extends JPanel {
 
     private void updateItemsAppearance() {
         lblLogoText.setVisible(expanded);
-        btnToggle.setText(expanded ? "◀  Thu gọn" : "▶");
+        btnToggle.setIcon(SidebarIcons.createToggleIcon(16, expanded));
+        btnToggle.setText(expanded ? "Thu gọn" : "");
+        btnToggle.setHorizontalAlignment(expanded ? SwingConstants.LEFT : SwingConstants.CENTER);
+        btnToggle.setIconTextGap(expanded ? 10 : 0);
+        btnToggle.setBorder(BorderFactory.createEmptyBorder(6, expanded ? 14 : 0, 6, expanded ? 8 : 0));
         btnToggle.setToolTipText(expanded ? "Thu gọn thanh điều hướng" : "Mở rộng thanh điều hướng");
 
         for (NavButton btn : navButtons.values()) {
@@ -195,27 +226,49 @@ public class ModernSidebar extends JPanel {
     public static class NavButton extends JButton {
         private final MenuId id;
         private final String fullLabel;
+        private final Icon vectorIcon;
         private final String iconText;
         private final String shortCode;
         private boolean isActive = false;
 
-        public NavButton(MenuId id, String fullLabel, String iconText, String shortCode) {
+        public NavButton(MenuId id, String fullLabel, Icon icon, String shortCode) {
             this.id = id;
             this.fullLabel = fullLabel;
-            this.iconText = iconText;
+            this.vectorIcon = icon;
+            this.iconText = "";
             this.shortCode = shortCode;
 
             setFont(UITheme.FONT_REGULAR);
+            setForeground(UITheme.TEXT_SECONDARY);
             setFocusPainted(false);
             setContentAreaFilled(false);
             setOpaque(false);
             setCursor(new Cursor(Cursor.HAND_CURSOR));
+            setRolloverEnabled(true);
+            setIcon(vectorIcon);
+            setIconTextGap(12);
             setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
             setPreferredSize(new Dimension(WIDTH_EXPANDED - 12, 40));
             setMinimumSize(new Dimension(WIDTH_COLLAPSED - 12, 40));
             setHorizontalAlignment(SwingConstants.LEFT);
             setToolTipText(fullLabel);
+
+            // Cập nhật màu chữ theo tương tác mà không gọi setForeground trong paintComponent
+            addChangeListener(e -> {
+                if (isActive) {
+                    setForeground(UITheme.PRIMARY);
+                } else if (getModel().isRollover()) {
+                    setForeground(UITheme.TEXT_PRIMARY);
+                } else {
+                    setForeground(UITheme.TEXT_SECONDARY);
+                }
+            });
+
             updateExpandedState(true);
+        }
+
+        public NavButton(MenuId id, String fullLabel, String iconText, String shortCode) {
+            this(id, fullLabel, SidebarIcons.getNavIcon(id, 20), shortCode);
         }
 
         public MenuId getMenuId() {
@@ -229,20 +282,25 @@ public class ModernSidebar extends JPanel {
         public void setActive(boolean active) {
             this.isActive = active;
             setFont(active ? UITheme.FONT_BOLD : UITheme.FONT_REGULAR);
-            setForeground(active ? UITheme.PRIMARY : UITheme.TEXT_PRIMARY);
+            setForeground(active ? UITheme.PRIMARY : UITheme.TEXT_SECONDARY);
             repaint();
         }
 
         public void updateExpandedState(boolean expanded) {
+            setIcon(vectorIcon);
             if (expanded) {
-                setText("  " + iconText + "  " + fullLabel);
+                setText(fullLabel);
                 setHorizontalAlignment(SwingConstants.LEFT);
-                setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
+                setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 10));
+                setIconTextGap(12);
             } else {
-                setText(iconText);
+                setText("");
                 setHorizontalAlignment(SwingConstants.CENTER);
                 setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+                setIconTextGap(0);
             }
+            revalidate();
+            repaint();
         }
 
         @Override
@@ -261,6 +319,10 @@ public class ModernSidebar extends JPanel {
                 // Dải tím Electric Indigo 3px lề trái
                 g2.setColor(UITheme.PRIMARY);
                 g2.fillRoundRect(2, 4, 3, h - 8, 2, 2);
+            } else if (getModel().isRollover()) {
+                // Nền hover tinh tế
+                g2.setColor(new Color(0xF1, 0xF5, 0xF9));
+                g2.fillRoundRect(2, 2, w - 4, h - 4, 8, 8);
             }
 
             g2.dispose();
