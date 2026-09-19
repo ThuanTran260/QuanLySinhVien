@@ -10,14 +10,20 @@ Tuân thủ nguyên tắc chống over-engineering theo [0001-simplified-swing-a
 src/main/java/com/quanlysinhvien/
 ├── Main.java                          # Điểm khởi chạy ứng dụng (FlatLaf FlatMacLightLaf)
 ├── model/
-│   └── SinhVien.java                  # Entity Domain Model + Validation dữ liệu
+│   ├── SinhVien.java                  # Entity Domain Model + Validation dữ liệu
+│   ├── MonHoc.java                    # Master môn học (seed từ TKB DCT.md)
+│   ├── Diem.java / DiemDetail.java    # Điểm thành phần theo môn (BC/CC/CK)
+│   └── DiemCalculator.java            # Công thức chung: Môn = BC*0.4 + CC*0.1 + CK*0.5
 ├── dao/
 │   ├── DatabaseConnection.java        # Quản lý kết nối JDBC, đọc db.properties, auto-init CSDL
-│   └── SinhVienDAO.java               # Thực thi CRUD, Tìm kiếm, Sắp xếp, Thống kê, Đọc/Ghi File
+│   ├── SinhVienDAO.java               # Thực thi CRUD, Tìm kiếm, Sắp xếp, Thống kê, Đọc/Ghi File
+│   ├── MonHocDAO.java                 # Seed + truy vấn 20 môn chuyên ngành
+│   └── DiemDAO.java                   # Upsert batch, seed random 4-7 môn/SV, TB tích lũy
 └── ui/
     ├── LoginForm.java                 # Bài 1: Form đăng nhập
     ├── CalculatorPanel.java           # Bài 2: Máy tính cơ bản (+, -, *, /, bắt lỗi chia cho 0)
     ├── StudentManagementPanel.java    # Bài 3 & P1-P8: Giao diện Quản lý Sinh viên toàn diện
+    ├── BangDiemDialog.java            # Bảng điểm theo môn (MigLayout + JTable + JFreeChart)
     └── MainFrame.java                 # Cửa sổ chính chứa JTabbedPane và Menu hệ thống
 ```
 
@@ -95,9 +101,16 @@ src/main/java/com/quanlysinhvien/
 mvn clean compile exec:java
 ```
 
-### 4.2. Chạy toàn bộ Test tự động (18 Tests)
+### Bảng điểm theo môn (nhánh `feature/bang-diem-theo-mon`)
+- Mỗi sinh viên random **4–7 môn tự do** từ 20 môn chuyên ngành (`MonHoc`, mã thật TKB HK1 2026-2027).
+- Mỗi môn 3 đầu điểm: **Báo cáo 40% + Chuyên cần 10% + Cuối kỳ 50%** → Điểm môn (làm tròn 2).
+- `DiemTB` = AVG điểm môn, tự ghi đè sau khi lưu. Nút **Bảng điểm** trên toolbar mở dialog
+  xem/sửa/thêm/xóa môn kèm biểu đồ JFreeChart. Ô Ngày sinh có DatePicker (đồng bộ ô text cũ).
+- Thư viện UI bổ sung: `MigLayout`, `JFreeChart`, `LGoodDatePicker` (xem `pom.xml`).
+
+### 4.2. Chạy toàn bộ Test tự động (61 Tests)
 ```bash
-mvn test
+mvn clean test
 ```
 
 ### 4.3. Đóng gói ứng dụng thành file JAR

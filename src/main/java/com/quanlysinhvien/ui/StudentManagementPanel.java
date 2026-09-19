@@ -9,6 +9,9 @@ import com.quanlysinhvien.ui.theme.ModernCardPanel;
 import com.quanlysinhvien.ui.theme.ModernTableRenderer;
 import com.quanlysinhvien.ui.theme.UITheme;
 
+import com.github.lgooddatepicker.components.DatePicker;
+import com.github.lgooddatepicker.components.DatePickerSettings;
+
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
@@ -19,6 +22,7 @@ import java.io.File;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -67,6 +71,7 @@ public class StudentManagementPanel extends JPanel {
     private JTextField txtHoTen;
     private JTextField txtLop;
     private JTextField txtNgaySinh;
+    private DatePicker datePickerNgaySinh;
     private JTextField txtDiemTB;
 
     // Search and Sort
@@ -87,6 +92,7 @@ public class StudentManagementPanel extends JPanel {
     private JButton btnRefresh;
     private JButton btnSort;
     private JButton btnStatistic;
+    private JButton btnBangDiem;
     private JButton btnExportFile;
     private JButton btnImportFile;
     private JButton btnMaximize;
@@ -201,7 +207,22 @@ public class StudentManagementPanel extends JPanel {
         txtNgaySinh = new JTextField();
         UITheme.styleTextField(txtNgaySinh);
         txtNgaySinh.setPreferredSize(new Dimension(0, 32));
-        fieldsPanel.add(txtNgaySinh, gbc);
+        // Ô chọn ngày (LGoodDatePicker) đồng bộ 2 chiều với txtNgaySinh để giữ
+        // validation/test cũ nguyên vẹn: validation vẫn đọc txtNgaySinh.
+        DatePickerSettings dps = new DatePickerSettings(new Locale("vi"));
+        dps.setFormatForDatesCommonEra("yyyy-MM-dd");
+        dps.setAllowEmptyDates(true);
+        datePickerNgaySinh = new DatePicker(dps);
+        datePickerNgaySinh.setPreferredSize(new Dimension(0, 32));
+        datePickerNgaySinh.addDateChangeListener(e -> {
+            LocalDate d = datePickerNgaySinh.getDate();
+            txtNgaySinh.setText(d != null ? d.format(SinhVien.DATE_FORMATTER) : "");
+        });
+        JPanel ngaySinhRow = new JPanel(new BorderLayout(6, 0));
+        ngaySinhRow.setOpaque(false);
+        ngaySinhRow.add(txtNgaySinh, BorderLayout.CENTER);
+        ngaySinhRow.add(datePickerNgaySinh, BorderLayout.EAST);
+        fieldsPanel.add(ngaySinhRow, gbc);
 
         // Điểm TB
         gbc.gridy = row++;
@@ -326,6 +347,12 @@ public class StudentManagementPanel extends JPanel {
         setFixedControlSize(btnStatistic, 80, 30);
         btnStatistic.setAlignmentY(Component.CENTER_ALIGNMENT);
 
+        // Bảng điểm theo môn (hướng A)
+        btnBangDiem = new ModernButton("Bảng điểm", UITheme.PRIMARY);
+        setFixedControlSize(btnBangDiem, 95, 30);
+        btnBangDiem.setAlignmentY(Component.CENTER_ALIGNMENT);
+        btnBangDiem.setToolTipText("Xem/sửa điểm theo môn (Báo cáo 40% + Chuyên cần 10% + Cuối kỳ 50%)");
+
         btnExportFile = new ModernButton("Xuất File", UITheme.NEUTRAL_BTN_BG, UITheme.NEUTRAL_BTN_HOVER, UITheme.NEUTRAL_BTN_TEXT);
         ((ModernButton) btnExportFile).setBorderColor(UITheme.NEUTRAL_BTN_BORDER);
         setFixedControlSize(btnExportFile, 80, 30);
@@ -361,6 +388,8 @@ public class StudentManagementPanel extends JPanel {
         toolBarPanel.add(createToolbarSeparator());
         toolBarPanel.add(Box.createRigidArea(new Dimension(6, 0)));
         toolBarPanel.add(btnStatistic);
+        toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        toolBarPanel.add(btnBangDiem);
         toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
         toolBarPanel.add(btnExportFile);
         toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
@@ -493,6 +522,7 @@ public class StudentManagementPanel extends JPanel {
                         txtHoTen.setText(tableModel.getValueAt(modelRow, 2).toString());
                         txtLop.setText(tableModel.getValueAt(modelRow, 3).toString());
                         txtNgaySinh.setText(tableModel.getValueAt(modelRow, 4).toString());
+                        syncDatePickerFromText();
 
                         Object diemVal = tableModel.getValueAt(modelRow, 5);
                         if (diemVal instanceof Number) {
@@ -525,8 +555,47 @@ public class StudentManagementPanel extends JPanel {
 
         btnSort.addActionListener(e -> onSort());
         btnStatistic.addActionListener(e -> showStatisticDialog());
+        btnBangDiem.addActionListener(e -> openBangDiem());
         btnExportFile.addActionListener(e -> onExportFile());
         btnImportFile.addActionListener(e -> onImportFile());
+    }
+
+    /** Đồng bộ DatePicker theo txtNgaySinh (khi chọn dòng / làm mới). Lỗi parse thì clear. */
+    private void syncDatePickerFromText() {
+        if (datePickerNgaySinh == null) {
+            return;
+        }
+        try {
+            String s = txtNgaySinh.getText().trim();
+            if (s.isEmpty()) {
+                datePickerNgaySinh.clear();
+            } else {
+                datePickerNgaySinh.setDate(LocalDate.parse(s, SinhVien.DATE_FORMATTER));
+            }
+        } catch (Exception ignored) {
+            datePickerNgaySinh.clear();
+        }
+    }
+
+    /** Mở dialog bảng điểm theo môn của SV đang chọn; lưu xong reload để cập nhật DiemTB. */
+    public void openBangDiem() {
+        int selectedRow = tblSinhVien.getSelectedRow();
+        int rowCount = tblSinhVien.getRowSorter() != null ?
+                tblSinhVien.getRowSorter().getViewRowCount() : tblSinhVien.getRowCount();
+        if (selectedRow < 0 || selectedRow >= rowCount) {
+            JOptionPane.showMessageDialog(this,
+                    "Vui lòng chọn một sinh viên trên bảng để xem bảng điểm!",
+                    "Chưa chọn sinh viên", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int modelRow = tblSinhVien.convertRowIndexToModel(selectedRow);
+        String maSV = tableModel.getValueAt(modelRow, 1).toString();
+        String hoTen = tableModel.getValueAt(modelRow, 2).toString();
+        String lop = tableModel.getValueAt(modelRow, 3).toString();
+        Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+        BangDiemDialog dlg = new BangDiemDialog(owner, maSV, hoTen, lop);
+        dlg.setOnSaved(() -> refreshAfterMutation());
+        dlg.setVisible(true);
     }
 
     /**
@@ -693,6 +762,9 @@ public class StudentManagementPanel extends JPanel {
         txtHoTen.setText("");
         txtLop.setText("");
         txtNgaySinh.setText("");
+        if (datePickerNgaySinh != null) {
+            datePickerNgaySinh.clear();
+        }
         txtDiemTB.setText("");
 
         txtMaSV.setEditable(true);
@@ -1235,6 +1307,14 @@ public class StudentManagementPanel extends JPanel {
 
     public JButton getBtnStatistic() {
         return btnStatistic;
+    }
+
+    public JButton getBtnBangDiem() {
+        return btnBangDiem;
+    }
+
+    public DatePicker getDatePickerNgaySinh() {
+        return datePickerNgaySinh;
     }
 
     public JButton getBtnExportFile() {
