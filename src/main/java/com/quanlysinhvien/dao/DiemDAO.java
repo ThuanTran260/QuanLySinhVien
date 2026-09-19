@@ -13,6 +13,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -55,22 +56,7 @@ public class DiemDAO {
     }
 
     public void upsert(Diem d) throws SQLException {
-        DiemCalculator.validateDiem(d.getDiemBaoCao(), "Điểm báo cáo");
-        DiemCalculator.validateDiem(d.getDiemChuyenCan(), "Điểm chuyên cần");
-        DiemCalculator.validateDiem(d.getDiemCuoiKy(), "Điểm cuối kỳ");
-        String sql = "INSERT INTO Diem (MaSV, MaMH, DiemBaoCao, DiemChuyenCan, DiemCuoiKy) "
-                + "VALUES (?, ?, ?, ?, ?) "
-                + "ON DUPLICATE KEY UPDATE DiemBaoCao = VALUES(DiemBaoCao), "
-                + "DiemChuyenCan = VALUES(DiemChuyenCan), DiemCuoiKy = VALUES(DiemCuoiKy)";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, d.getMaSV().trim());
-            ps.setString(2, d.getMaMH().trim());
-            ps.setFloat(3, d.getDiemBaoCao());
-            ps.setFloat(4, d.getDiemChuyenCan());
-            ps.setFloat(5, d.getDiemCuoiKy());
-            ps.executeUpdate();
-        }
+        upsertBatch(java.util.Collections.singletonList(d));
     }
 
     public void upsertBatch(List<Diem> list) throws SQLException {
@@ -123,6 +109,71 @@ public class DiemDAO {
             ps.setString(1, maSV.trim());
             ps.executeUpdate();
         }
+    }
+
+    /**
+     * Lưu toàn bộ bảng điểm 1 SV trong đúng 1 transaction duy nhất:
+     * xóa môn đã gỡ + upsert batch + ghi đè SinhVien.DiemTB.
+     * Dialog phải gọi hàm này thay vì gọi 3 DAO rời rạc (tránh dở dang khi 1 bước lỗi).
+     */
+    public void saveBangDiem(String maSV, List<Diem> toSave, double tbTichLuy) throws SQLException {
+        if (toSave == null || toSave.isEmpty()) {
+            throw new IllegalArgumentException("Bảng điểm trống, thêm ít nhất 1 môn!");
+        }
+        String deleteSql = "DELETE FROM Diem WHERE MaSV = ? AND MaMH = ?";
+        String upsertSql = "INSERT INTO Diem (MaSV, MaMH, DiemBaoCao, DiemChuyenCan, DiemCuoiKy) "
+                + "VALUES (?, ?, ?, ?, ?) "
+                + "ON DUPLICATE KEY UPDATE DiemBaoCao = VALUES(DiemBaoCao), "
+                + "DiemChuyenCan = VALUES(DiemChuyenCan), DiemCuoiKy = VALUES(DiemCuoiKy)";
+        String updateTbSql = "UPDATE SinhVien SET DiemTB = ? WHERE MaSV = ?";
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement psDel = conn.prepareStatement(deleteSql);
+                 PreparedStatement psUp = conn.prepareStatement(upsertSql);
+                 PreparedStatement psTb = conn.prepareStatement(updateTbSql);
+                 Statement st = conn.createStatement();
+                 ResultSet rs = st.executeQuery(
+                         "SELECT MaMH FROM Diem WHERE MaSV = '" + escape(maSV.trim()) + "'")) {
+                Set<String> keep = new java.util.HashSet<>();
+                for (Diem d : toSave) {
+                    DiemCalculator.validateDiem(d.getDiemBaoCao(), "Điểm báo cáo");
+                    DiemCalculator.validateDiem(d.getDiemChuyenCan(), "Điểm chuyên cần");
+                    DiemCalculator.validateDiem(d.getDiemCuoiKy(), "Điểm cuối kỳ");
+                    keep.add(d.getMaMH().trim());
+                }
+                while (rs.next()) {
+                    String oldMH = rs.getString(1);
+                    if (!keep.contains(oldMH)) {
+                        psDel.setString(1, maSV.trim());
+                        psDel.setString(2, oldMH);
+                        psDel.addBatch();
+                    }
+                }
+                psDel.executeBatch();
+                for (Diem d : toSave) {
+                    psUp.setString(1, d.getMaSV().trim());
+                    psUp.setString(2, d.getMaMH().trim());
+                    psUp.setFloat(3, d.getDiemBaoCao());
+                    psUp.setFloat(4, d.getDiemChuyenCan());
+                    psUp.setFloat(5, d.getDiemCuoiKy());
+                    psUp.addBatch();
+                }
+                psUp.executeBatch();
+                psTb.setFloat(1, (float) tbTichLuy);
+                psTb.setString(2, maSV.trim());
+                psTb.executeUpdate();
+                conn.commit();
+            } catch (SQLException | IllegalArgumentException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+    private static String escape(String s) {
+        return s.replace("\\", "\\\\").replace("'", "\\'");
     }
 
     /** TB tích lũy = AVG(DiemMon realtime, round2). Rỗng -> 0. */

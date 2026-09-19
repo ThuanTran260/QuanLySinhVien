@@ -73,6 +73,36 @@ public class DiemDAOTest {
     }
 
     @Test
+    @Order(4)
+    @DisplayName("saveBangDiem 1 transaction: giữ nguyên số dòng + cập nhật DiemTB")
+    void testSaveBangDiemSingleTransaction() {
+        Assumptions.assumeTrue(dbAvailable, "Bỏ qua do MySQL không khả dụng: " + dbError);
+        try {
+            List<DiemDetail> current = diemDAO.getByMaSV("3124410003");
+            Assumptions.assumeFalse(current.isEmpty(), "SV mẫu chưa có điểm seed");
+            java.util.List<com.quanlysinhvien.model.Diem> toSave = new java.util.ArrayList<>();
+            java.util.List<Double> mons = new java.util.ArrayList<>();
+            for (DiemDetail d : current) {
+                toSave.add(new Diem(d.getMaSV(), d.getMaMH(),
+                        d.getDiemBaoCao(), d.getDiemChuyenCan(), d.getDiemCuoiKy()));
+                mons.add(d.getDiemMon());
+            }
+            double tb = com.quanlysinhvien.model.DiemCalculator.diemTB(mons);
+            int countBefore = diemDAO.countAll();
+            diemDAO.saveBangDiem("3124410003", toSave, tb);
+            assertEquals(countBefore, diemDAO.countAll(), "Lưu lại y nguyên không được đổi tổng dòng");
+            assertEquals(tb, diemDAO.calcTichLuy("3124410003"), 0.001, "TB sau lưu phải khớp");
+            // Bảng rỗng -> từ chối, không ghi gì
+            assertThrows(IllegalArgumentException.class,
+                    () -> diemDAO.saveBangDiem("3124410003", new java.util.ArrayList<>(), 0));
+        } catch (IllegalArgumentException iae) {
+            throw iae;
+        } catch (Exception e) {
+            fail("Lỗi saveBangDiem: " + e.getMessage());
+        }
+    }
+
+    @Test
     @Order(3)
     @DisplayName("Upsert idempotent + từ chối điểm ngoài 0-10")
     void testUpsertAndValidation() {

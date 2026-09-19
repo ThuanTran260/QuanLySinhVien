@@ -2,7 +2,6 @@ package com.quanlysinhvien.ui;
 
 import com.quanlysinhvien.dao.DiemDAO;
 import com.quanlysinhvien.dao.MonHocDAO;
-import com.quanlysinhvien.dao.SinhVienDAO;
 import com.quanlysinhvien.model.Diem;
 import com.quanlysinhvien.model.DiemCalculator;
 import com.quanlysinhvien.model.DiemDetail;
@@ -38,7 +37,6 @@ public class BangDiemDialog extends JDialog {
     private final String maSV;
     private final DiemDAO diemDAO = new DiemDAO();
     private final MonHocDAO monHocDAO = new MonHocDAO();
-    private final SinhVienDAO sinhVienDAO = new SinhVienDAO();
 
     private JLabel lblInfo;
     private JLabel lblTichLuy;
@@ -103,6 +101,16 @@ public class BangDiemDialog extends JDialog {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setRowHeight(28);
         table.setFillsViewportHeight(true);
+        // Style theo token hệ thống (KHÔNG dùng ModernTableRenderer: cột Điểm môn là số,
+        // renderer đó sẽ nhầm thành badge "Yếu" vì nó key theo modelColumn == 6 là text xếp loại)
+        table.setSelectionBackground(UITheme.TABLE_SELECTION_BG);
+        table.setSelectionForeground(UITheme.TABLE_SELECTION_TEXT);
+        table.setShowVerticalLines(false);
+        table.setGridColor(new Color(241, 245, 249));
+        table.getTableHeader().setFont(UITheme.FONT_BOLD);
+        table.getTableHeader().setBackground(UITheme.TABLE_HEADER_BG);
+        table.getTableHeader().setForeground(UITheme.TABLE_HEADER_TEXT);
+        table.getTableHeader().setReorderingAllowed(false);
         table.getColumnModel().getColumn(0).setPreferredWidth(70);
         table.getColumnModel().getColumn(1).setPreferredWidth(260);
         table.getColumnModel().getColumn(2).setPreferredWidth(40);
@@ -114,7 +122,7 @@ public class BangDiemDialog extends JDialog {
         JPanel addPanel = new JPanel(new MigLayout("insets 0", "[grow, fill][][]", "[]"));
         addPanel.setOpaque(false);
         cbMonHoc = new JComboBox<>();
-        cbMonHoc.setFont(UITheme.FONT_REGULAR);
+        UITheme.styleComboBox(cbMonHoc);
         addPanel.add(new JLabel("Thêm môn:"), "w 70!");
         addPanel.add(cbMonHoc, "growx");
         JButton btnAdd = new ModernButton("Thêm", UITheme.SUCCESS);
@@ -132,14 +140,14 @@ public class BangDiemDialog extends JDialog {
         JFreeChart chart = ChartFactory.createBarChart(
                 "Điểm môn", "Môn học", "Điểm", chartDataset,
                 PlotOrientation.VERTICAL, false, false, false);
-        chart.setBackgroundPaint(Color.WHITE);
+        chart.setBackgroundPaint(UITheme.CARD_BG);
         CategoryPlot plot = chart.getCategoryPlot();
         plot.setBackgroundPaint(UITheme.CANVAS_BG);
         plot.getRenderer().setSeriesPaint(0, UITheme.PRIMARY);
         ChartPanel chartPanel = new ChartPanel(chart);
         chartPanel.setPreferredSize(new Dimension(700, 180));
         chartPanel.setMouseWheelEnabled(false);
-        chartPanel.setBackground(Color.WHITE);
+        chartPanel.setBackground(UITheme.CARD_BG);
         root.add(chartPanel, "growx, h 180!");
 
         // 5. Footer
@@ -195,17 +203,17 @@ public class BangDiemDialog extends JDialog {
 
     private void renderTable(List<DiemDetail> list) {
         tableModel.setRowCount(0);
-        List<Double> mons = new ArrayList<>();
+        List<Double> diemMons = new ArrayList<>();
         for (DiemDetail d : list) {
             double dm = d.getDiemMon();
-            mons.add(dm);
+            diemMons.add(dm);
             tableModel.addRow(new Object[]{
                     d.getMaMH(), d.getTenMH(), d.getSoTC(),
                     (double) d.getDiemBaoCao(), (double) d.getDiemChuyenCan(),
                     (double) d.getDiemCuoiKy(), dm
             });
         }
-        updateTichLuy(mons);
+        updateTichLuy(diemMons);
         refreshChart();
     }
 
@@ -273,18 +281,18 @@ public class BangDiemDialog extends JDialog {
     }
 
     private void refreshTichLuyFromTable() {
-        List<Double> mons = new ArrayList<>();
+        List<Double> diemMons = new ArrayList<>();
         for (int i = 0; i < tableModel.getRowCount(); i++) {
             try {
                 double bc = toDouble(tableModel.getValueAt(i, 3));
                 double cc = toDouble(tableModel.getValueAt(i, 4));
                 double ck = toDouble(tableModel.getValueAt(i, 5));
-                mons.add(DiemCalculator.diemMon(bc, cc, ck));
+                diemMons.add(DiemCalculator.diemMon(bc, cc, ck));
             } catch (Exception ignored) {
                 // Ô đang nhập dở — bỏ qua khi preview
             }
         }
-        updateTichLuy(mons);
+        updateTichLuy(diemMons);
         refreshChart();
     }
 
@@ -301,7 +309,7 @@ public class BangDiemDialog extends JDialog {
         }
         // Validate toàn bộ trước khi ghi (báo đúng dòng + tên cột)
         List<Diem> toSave = new ArrayList<>();
-        List<Double> mons = new ArrayList<>();
+        List<Double> diemMons = new ArrayList<>();
         for (int i = 0; i < tableModel.getRowCount(); i++) {
             String maMH = String.valueOf(tableModel.getValueAt(i, 0));
             float bc, cc, ck;
@@ -317,31 +325,20 @@ public class BangDiemDialog extends JDialog {
                 return;
             }
             toSave.add(new Diem(maSV, maMH, bc, cc, ck));
-            mons.add(DiemCalculator.diemMon(bc, cc, ck));
+            diemMons.add(DiemCalculator.diemMon(bc, cc, ck));
         }
         if (toSave.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Bảng điểm trống, thêm ít nhất 1 môn!",
                     "Thiếu dữ liệu", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        double tb = DiemCalculator.diemTB(mons);
+        double tb = DiemCalculator.diemTB(diemMons);
         lblStatus.setText("Đang lưu…");
         new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() throws Exception {
-                // Xóa môn đã gỡ khỏi bảng (diff DB vs table), rồi upsert batch + ghi đè DiemTB
-                List<DiemDetail> inDb = diemDAO.getByMaSV(maSV);
-                Set<String> keep = new HashSet<>();
-                for (Diem d : toSave) {
-                    keep.add(d.getMaMH());
-                }
-                for (DiemDetail old : inDb) {
-                    if (!keep.contains(old.getMaMH())) {
-                        diemDAO.delete(maSV, old.getMaMH());
-                    }
-                }
-                diemDAO.upsertBatch(toSave);
-                sinhVienDAO.updateDiemTB(maSV, (float) tb);
+                // 1 transaction duy nhất: xóa môn đã gỡ + upsert + ghi đè DiemTB
+                diemDAO.saveBangDiem(maSV, toSave, tb);
                 return null;
             }
 
