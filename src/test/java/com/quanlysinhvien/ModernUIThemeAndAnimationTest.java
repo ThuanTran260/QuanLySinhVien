@@ -239,7 +239,7 @@ public class ModernUIThemeAndAnimationTest {
         assertEquals(Float.class, panel.getTableModel().getColumnClass(5));
 
         // Sắp xếp in-memory fallback
-        panel.getCbSort().setSelectedIndex(4); // Điểm TB (Tăng dần)
+        panel.setSortIndex(4); // Điểm TB (Tăng dần)
         panel.triggerSort();
         assertEquals(84, panel.getTable().getRowCount());
 

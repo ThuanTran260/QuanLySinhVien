@@ -230,12 +230,15 @@ public class DatabaseConnection {
             System.err.println("Lỗi khi tự động khởi tạo CSDL: " + e.getMessage());
             return;
         }
-        // Seed master môn học + điểm random 4-7 môn/SV (chỉ chạy 1 lần, ngoài synchronized rootConn
-        // để dùng đúng connection DB targets và transaction riêng; lỗi seed không chặn app).
+        // Seed master môn học + điểm đa dạng 4-7 môn/SV (tự động reseed nếu dữ liệu rỗng hoặc phương sai hẹp >85% Khá).
         try {
             new MonHocDAO().ensureSeeded();
-            new DiemDAO().seedIfEmpty();
-            new DiemDAO().syncTichLuyAll();
+            DiemDAO diemDAO = new DiemDAO();
+            if (diemDAO.countAll() == 0 || diemDAO.hasNarrowVariance()) {
+                diemDAO.reseedDiverseGrades();
+            } else {
+                diemDAO.syncTichLuyAll();
+            }
         } catch (Exception e) {
             System.err.println("Lỗi khi seed bảng điểm: " + e.getMessage());
         }

@@ -301,7 +301,7 @@ public class DashboardAndKpiTest {
         assertTrue(panel.isMaximized());
 
         // Thực hiện sắp xếp khi đang Maximize
-        panel.getCbSort().setSelectedIndex(4); // Điểm tăng dần
+        panel.setSortIndex(4); // Điểm tăng dần
         panel.triggerSort();
         assertTrue(panel.isMaximized(), "Sắp xếp không được làm thoát chế độ Maximize");
         assertEquals(84, panel.getTable().getRowCount());

@@ -115,4 +115,33 @@ public class UIComponentTest {
 
         mainFrame.dispose();
     }
+
+    @Test
+    @DisplayName("Kiểm tra Menu Hệ thống -> Tạo lại dữ liệu điểm đa dạng trên MainFrame")
+    void testMainFrameReseedMenuItem() {
+        Assumptions.assumeFalse(GraphicsEnvironment.isHeadless(), "Bỏ qua kiểm tra GUI trong môi trường headless");
+
+        MainFrame mainFrame = new MainFrame();
+        assertNotNull(mainFrame);
+        assertNotNull(mainFrame.getItemReseed(), "Phải có itemReseed trong MainFrame");
+        assertTrue(mainFrame.getItemReseed().getText().contains("Tạo lại dữ liệu điểm đa dạng"));
+
+        // Kiểm tra itemReseed nằm trong Menu Hệ thống
+        JMenuBar mb = mainFrame.getJMenuBar();
+        assertNotNull(mb);
+        JMenu menuSystem = mb.getMenu(0);
+        assertEquals("Hệ thống", menuSystem.getText());
+
+        boolean foundReseed = false;
+        for (int i = 0; i < menuSystem.getItemCount(); i++) {
+            JMenuItem item = menuSystem.getItem(i);
+            if (item == mainFrame.getItemReseed()) {
+                foundReseed = true;
+                break;
+            }
+        }
+        assertTrue(foundReseed, "itemReseed phải nằm trong Menu Hệ thống");
+
+        mainFrame.dispose();
+    }
 }

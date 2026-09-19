@@ -41,12 +41,12 @@ public class DiemDAOTest {
 
     @Test
     @Order(1)
-    @DisplayName("Seed đủ 20 môn chuyên ngành")
+    @DisplayName("Seed đủ 37 môn chuyên ngành")
     void testMonHocSeeded() {
         Assumptions.assumeTrue(dbAvailable, "Bỏ qua do MySQL không khả dụng: " + dbError);
         try {
-            assertEquals(20, monHocDAO.count(), "Phải seed đủ 20 môn");
-            assertEquals(20, monHocDAO.getAll().size());
+            assertEquals(37, monHocDAO.count(), "Phải seed đủ 37 môn");
+            assertEquals(37, monHocDAO.getAll().size());
         } catch (Exception e) {
             fail("Lỗi truy vấn MonHoc: " + e.getMessage());
         }
@@ -124,6 +124,148 @@ public class DiemDAOTest {
             throw iae;
         } catch (Exception e) {
             fail("Lỗi upsert Diem: " + e.getMessage());
+        }
+    }
+
+    @Test
+    @Order(5)
+    @DisplayName("syncTichLuyAll đồng bộ GPA toàn bộ sinh viên khớp với calcTichLuy")
+    void testSyncTichLuyAll() {
+        Assumptions.assumeTrue(dbAvailable, "Bỏ qua do MySQL không khả dụng: " + dbError);
+        try {
+            diemDAO.syncTichLuyAll();
+            double tb = diemDAO.calcTichLuy("3124410003");
+            try (Connection conn = DatabaseConnection.getConnection();
+                 java.sql.PreparedStatement ps = conn.prepareStatement("SELECT DiemTB FROM SinhVien WHERE MaSV = ?")) {
+                ps.setString(1, "3124410003");
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                    assertTrue(rs.next(), "Phải tìm thấy sinh viên");
+                    float gpaInDb = rs.getFloat(1);
+                    assertEquals((float) tb, gpaInDb, 0.05f, "DiemTB trong CSDL phải khớp calcTichLuy");
+                }
+            }
+        } catch (Exception e) {
+            fail("Lỗi syncTichLuyAll: " + e.getMessage());
+        }
+    }
+
+    @Test
+    @Order(6)
+    @DisplayName("saveBangDiem từ chối danh sách chứa môn học trùng lặp")
+    void testSaveBangDiemRejectsDuplicateSubjects() {
+        Assumptions.assumeTrue(dbAvailable, "Bỏ qua do MySQL không khả dụng: " + dbError);
+        java.util.List<com.quanlysinhvien.model.Diem> duplicates = java.util.Arrays.asList(
+                new Diem("3124410003", "841021", 8f, 8f, 8f),
+                new Diem("3124410003", "841021", 9f, 9f, 9f)
+        );
+        assertThrows(IllegalArgumentException.class,
+                () -> diemDAO.saveBangDiem("3124410003", duplicates, 8.5));
+    }
+
+    @Test
+    @Order(7)
+    @DisplayName("reseedDiverseGrades phân bổ đủ 5 bậc học lực: Xuất sắc, Giỏi, Khá, TB, Yếu")
+    void testReseedDiverseGradesFullTiers() {
+        Assumptions.assumeTrue(dbAvailable, "Bỏ qua do MySQL không khả dụng: " + dbError);
+        try {
+            diemDAO.reseedDiverseGrades();
+            assertFalse(diemDAO.hasNarrowVariance(), "Dữ liệu sau khi reseed không được coi là bị hẹp phương sai");
+
+            int countXuatSac = 0;
+            int countGioi = 0;
+            int countKha = 0;
+            int countTB = 0;
+            int countYeu = 0;
+            int totalStudents = 0;
+
+            try (Connection conn = DatabaseConnection.getConnection();
+                 java.sql.Statement st = conn.createStatement();
+                 java.sql.ResultSet rs = st.executeQuery("SELECT MaSV, DiemTB FROM SinhVien")) {
+                while (rs.next()) {
+                    totalStudents++;
+                    String maSV = rs.getString(1);
+                    float gpa = rs.getFloat(2);
+
+                    if (gpa >= 9.0f) {
+                        countXuatSac++;
+                    } else if (gpa >= 8.0f) {
+                        countGioi++;
+                    } else if (gpa >= 6.5f) {
+                        countKha++;
+                    } else if (gpa >= 5.0f) {
+                        countTB++;
+                    } else {
+                        countYeu++;
+                    }
+
+                    // Điểm TB trên SinhVien phải khớp với calcTichLuy từ Diem
+                    double calcGpa = diemDAO.calcTichLuy(maSV);
+                    assertEquals((float) calcGpa, gpa, 0.05f, "DiemTB của " + maSV + " phải khớp calcTichLuy");
+                }
+            }
+
+            assertEquals(84, totalStudents, "Phải có đúng 84 sinh viên");
+            assertTrue(countXuatSac >= 3, "Phải có sinh viên Xuất sắc (>= 9.0), thực tế: " + countXuatSac);
+            assertTrue(countGioi >= 10, "Phải có sinh viên Giỏi (8.0 - 8.9), thực tế: " + countGioi);
+            assertTrue(countKha >= 20, "Phải có sinh viên Khá (6.5 - 7.9), thực tế: " + countKha);
+            assertTrue(countTB >= 10, "Phải có sinh viên Trung bình (5.0 - 6.4), thực tế: " + countTB);
+            assertTrue(countYeu >= 3, "Phải có sinh viên Yếu (< 5.0, 3.2 - 4.9), thực tế: " + countYeu);
+        } catch (Exception e) {
+            fail("Lỗi reseedDiverseGrades: " + e.getMessage());
+        }
+    }
+
+    @Test
+    @Order(8)
+    @DisplayName("Mỗi sinh viên được gán 4-7 môn và các điểm thành phần hợp lệ trong khoảng [0, 10]")
+    void testSubjectCountPerStudentRange() {
+        Assumptions.assumeTrue(dbAvailable, "Bỏ qua do MySQL không khả dụng: " + dbError);
+        try {
+            try (Connection conn = DatabaseConnection.getConnection();
+                 java.sql.Statement st = conn.createStatement();
+                 java.sql.ResultSet rs = st.executeQuery("SELECT MaSV FROM SinhVien ORDER BY MaSV ASC")) {
+                while (rs.next()) {
+                    String maSV = rs.getString(1);
+                    List<DiemDetail> list = diemDAO.getByMaSV(maSV);
+                    assertTrue(list.size() >= 4 && list.size() <= 7,
+                            "Sinh viên " + maSV + " phải có từ 4 đến 7 môn, thực tế: " + list.size());
+                    for (DiemDetail d : list) {
+                        assertTrue(d.getDiemBaoCao() >= 0.0f && d.getDiemBaoCao() <= 10.0f);
+                        assertTrue(d.getDiemChuyenCan() >= 0.0f && d.getDiemChuyenCan() <= 10.0f);
+                        assertTrue(d.getDiemCuoiKy() >= 0.0f && d.getDiemCuoiKy() <= 10.0f);
+                        assertTrue(d.getDiemMon() >= 0.0 && d.getDiemMon() <= 10.0);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            fail("Lỗi kiểm tra số môn và điểm thành phần: " + e.getMessage());
+        }
+    }
+
+    @Test
+    @Order(9)
+    @DisplayName("hasNarrowVariance phát hiện >85% Khá nhưng không xóa nhầm khi lớp toàn sinh viên Giỏi")
+    void testHasNarrowVarianceLogic() {
+        Assumptions.assumeTrue(dbAvailable, "Bỏ qua do MySQL không khả dụng: " + dbError);
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            // 1. Giả lập toàn bộ sinh viên có điểm Khá (7.0) -> phương sai hẹp >85%
+            try (java.sql.PreparedStatement ps = conn.prepareStatement("UPDATE SinhVien SET DiemTB = 7.0")) {
+                ps.executeUpdate();
+            }
+            assertTrue(diemDAO.hasNarrowVariance(), "Phải phát hiện phương sai hẹp khi 100% sinh viên điểm Khá");
+
+            // 2. Giả lập một lớp học giỏi (100% Giỏi 8.5, không có Xuất sắc, không có Yếu)
+            // CSDL không được coi đây là phương sai hẹp để tránh xóa sạch điểm của người dùng!
+            try (java.sql.PreparedStatement ps = conn.prepareStatement("UPDATE SinhVien SET DiemTB = 8.5")) {
+                ps.executeUpdate();
+            }
+            assertFalse(diemDAO.hasNarrowVariance(), "Lớp toàn Giỏi không được coi là phương sai hẹp (>85% Khá)");
+
+            // 3. Khôi phục lại dữ liệu điểm đa dạng
+            diemDAO.reseedDiverseGrades();
+            assertFalse(diemDAO.hasNarrowVariance(), "Sau khi reseed đa dạng thì hasNarrowVariance phải là false");
+        } catch (Exception e) {
+            fail("Lỗi kiểm tra logic hasNarrowVariance: " + e.getMessage());
         }
     }
 }

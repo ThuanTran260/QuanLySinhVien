@@ -74,10 +74,15 @@ public class StudentManagementPanel extends JPanel {
     private DatePicker datePickerNgaySinh;
     private JTextField txtDiemTB;
 
-    // Search and Sort
+    // Bộ lọc thống nhất: tiêu chí tìm + sắp xếp chung 1 popup (thay 2 JComboBox cũ)
     private JTextField txtSearch;
-    private JComboBox<String> cbSearchCriteria;
-    private JComboBox<String> cbSort;
+    private JButton btnFilter;
+    private String searchCriteria = "Tất cả";
+    /** -1 = mặc định (không sắp xếp), 0-7 = 8 kiểu sắp xếp như combo cũ. */
+    private int sortIndex = -1;
+    private JPopupMenu filterPopup;
+    private List<JRadioButton> criteriaRadios;
+    private List<JRadioButton> sortRadios;
 
     // Table
     private JTable tblSinhVien;
@@ -90,9 +95,10 @@ public class StudentManagementPanel extends JPanel {
     private JButton btnClear;
     private JButton btnSearch;
     private JButton btnRefresh;
-    private JButton btnSort;
     private JButton btnStatistic;
     private JButton btnBangDiem;
+    private JButton btnOpenBangDiem;
+    private JPopupMenu tableContextMenu;
     private JButton btnExportFile;
     private JButton btnImportFile;
     private JButton btnMaximize;
@@ -206,22 +212,59 @@ public class StudentManagementPanel extends JPanel {
         gbc.insets = new Insets(0, 0, 8, 0);
         txtNgaySinh = new JTextField();
         UITheme.styleTextField(txtNgaySinh);
-        txtNgaySinh.setPreferredSize(new Dimension(0, 32));
-        // Ô chọn ngày (LGoodDatePicker) đồng bộ 2 chiều với txtNgaySinh để giữ
-        // validation/test cũ nguyên vẹn: validation vẫn đọc txtNgaySinh.
+        txtNgaySinh.setVisible(false);
+
+        // Ô chọn ngày (LGoodDatePicker) hiển thị toàn bộ chiều rộng hàng ngày sinh.
+        // Đồng bộ 2 chiều với txtNgaySinh (ẩn) để giữ nguyên vẹn validation và headless tests.
         DatePickerSettings dps = new DatePickerSettings(new Locale("vi"));
         dps.setFormatForDatesCommonEra("yyyy-MM-dd");
         dps.setAllowEmptyDates(true);
         datePickerNgaySinh = new DatePicker(dps);
         datePickerNgaySinh.setPreferredSize(new Dimension(0, 32));
+
+        final boolean[] isSyncing = new boolean[]{false};
         datePickerNgaySinh.addDateChangeListener(e -> {
-            LocalDate d = datePickerNgaySinh.getDate();
-            txtNgaySinh.setText(d != null ? d.format(SinhVien.DATE_FORMATTER) : "");
+            if (isSyncing[0]) return;
+            isSyncing[0] = true;
+            try {
+                LocalDate d = datePickerNgaySinh.getDate();
+                txtNgaySinh.setText(d != null ? d.format(SinhVien.DATE_FORMATTER) : "");
+            } finally {
+                isSyncing[0] = false;
+            }
         });
-        JPanel ngaySinhRow = new JPanel(new BorderLayout(6, 0));
+
+        txtNgaySinh.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            private void sync() {
+                if (isSyncing[0]) return;
+                isSyncing[0] = true;
+                try {
+                    String s = txtNgaySinh.getText().trim();
+                    if (s.isEmpty()) {
+                        datePickerNgaySinh.clear();
+                    } else {
+                        try {
+                            datePickerNgaySinh.setDate(LocalDate.parse(s, SinhVien.DATE_FORMATTER));
+                        } catch (Exception ex) {
+                            datePickerNgaySinh.clear();
+                        }
+                    }
+                } finally {
+                    isSyncing[0] = false;
+                }
+            }
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { sync(); }
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { sync(); }
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { sync(); }
+        });
+
+        JPanel ngaySinhRow = new JPanel(new BorderLayout());
         ngaySinhRow.setOpaque(false);
-        ngaySinhRow.add(txtNgaySinh, BorderLayout.CENTER);
-        ngaySinhRow.add(datePickerNgaySinh, BorderLayout.EAST);
+        ngaySinhRow.add(datePickerNgaySinh, BorderLayout.CENTER);
+        ngaySinhRow.add(txtNgaySinh, BorderLayout.SOUTH);
         fieldsPanel.add(ngaySinhRow, gbc);
 
         // Điểm TB
@@ -236,6 +279,9 @@ public class StudentManagementPanel extends JPanel {
         gbc.insets = new Insets(0, 0, 4, 0);
         txtDiemTB = new JTextField();
         UITheme.styleTextField(txtDiemTB);
+        txtDiemTB.setEditable(false);
+        txtDiemTB.setBackground(UITheme.BG_MUTED);
+        txtDiemTB.setToolTipText("Điểm TB được tự động tính theo trọng số tín chỉ từ Bảng điểm theo môn");
         txtDiemTB.setPreferredSize(new Dimension(0, 32));
         fieldsPanel.add(txtDiemTB, gbc);
 
@@ -269,6 +315,13 @@ public class StudentManagementPanel extends JPanel {
         btnGrid.add(btnDelete);
         btnGrid.add(btnClear);
 
+        // Nút Bảng Điểm Theo Môn nằm ngay bên dưới 4 nút CRUD, kích thước đầy đủ dễ thấy
+        btnOpenBangDiem = new ModernButton("📊 Bảng Điểm Theo Môn", UITheme.PRIMARY);
+        btnOpenBangDiem.setPreferredSize(new Dimension(0, 36));
+        btnOpenBangDiem.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        btnOpenBangDiem.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnOpenBangDiem.setToolTipText("Xem/sửa bảng điểm theo môn của sinh viên đang chọn");
+
         // Body Form bên trái
         JPanel formBody = new JPanel();
         formBody.setLayout(new BoxLayout(formBody, BoxLayout.Y_AXIS));
@@ -279,6 +332,8 @@ public class StudentManagementPanel extends JPanel {
         formBody.add(fieldsPanel);
         formBody.add(Box.createRigidArea(new Dimension(0, 10)));
         formBody.add(btnGrid);
+        formBody.add(Box.createRigidArea(new Dimension(0, 8)));
+        formBody.add(btnOpenBangDiem);
 
         JScrollPane formScroll = new JScrollPane(formBody);
         formScroll.setBorder(null);
@@ -302,17 +357,19 @@ public class StudentManagementPanel extends JPanel {
         toolBarPanel.setLayout(new BoxLayout(toolBarPanel, BoxLayout.X_AXIS));
         toolBarPanel.setOpaque(false);
 
-        // Nhóm Tìm kiếm
-        cbSearchCriteria = new JComboBox<>(new String[]{"Tất cả", "Mã SV", "Họ tên", "Lớp"});
-        UITheme.styleComboBox(cbSearchCriteria);
-        setFixedControlSize(cbSearchCriteria, 80, 30);
-        cbSearchCriteria.setAlignmentY(Component.CENTER_ALIGNMENT);
-
+        // Nhóm Tìm kiếm + Bộ lọc thống nhất (1 nút thay 2 combo cũ)
         txtSearch = new JTextField();
         UITheme.styleTextField(txtSearch);
         setFixedControlSize(txtSearch, 100, 30);
         txtSearch.setAlignmentY(Component.CENTER_ALIGNMENT);
         txtSearch.setToolTipText("Nhập từ khóa tìm kiếm...");
+
+        btnFilter = new ModernButton("Bộ lọc", UITheme.NEUTRAL_BTN_BG, UITheme.NEUTRAL_BTN_HOVER, UITheme.NEUTRAL_BTN_TEXT);
+        ((ModernButton) btnFilter).setBorderColor(UITheme.NEUTRAL_BTN_BORDER);
+        setFixedControlSize(btnFilter, 90, 30);
+        btnFilter.setAlignmentY(Component.CENTER_ALIGNMENT);
+        btnFilter.setToolTipText("Chọn tiêu chí tìm kiếm và cách sắp xếp");
+        buildFilterPopup();
 
         btnSearch = new ModernButton("Tìm kiếm", UITheme.PRIMARY);
         setFixedControlSize(btnSearch, 80, 30);
@@ -322,25 +379,6 @@ public class StudentManagementPanel extends JPanel {
         ((ModernButton) btnRefresh).setBorderColor(UITheme.NEUTRAL_BTN_BORDER);
         setFixedControlSize(btnRefresh, 65, 30);
         btnRefresh.setAlignmentY(Component.CENTER_ALIGNMENT);
-
-        // Nhóm Sắp xếp
-        cbSort = new JComboBox<>(new String[]{
-                "Tên (A-Z)",
-                "Tên (Z-A)",
-                "Họ và Tên (A-Z)",
-                "Họ và Tên (Z-A)",
-                "Điểm TB (Tăng dần)",
-                "Điểm TB (Giảm dần)",
-                "Mã SV (Tăng dần)",
-                "Mã SV (Giảm dần)"
-        });
-        UITheme.styleComboBox(cbSort);
-        setFixedControlSize(cbSort, 125, 30);
-        cbSort.setAlignmentY(Component.CENTER_ALIGNMENT);
-
-        btnSort = new ModernButton("Sắp xếp", UITheme.PRIMARY);
-        setFixedControlSize(btnSort, 75, 30);
-        btnSort.setAlignmentY(Component.CENTER_ALIGNMENT);
 
         // Thống kê & File IO
         btnStatistic = new ModernButton("Thống kê", new Color(0x7C, 0x3A, 0xED));
@@ -370,10 +408,10 @@ public class StudentManagementPanel extends JPanel {
         btnMaximize.setToolTipText("Phóng to bảng chiếm 100% diện tích (Phím tắt: F11 vào/ra, Esc thoát)");
         btnMaximize.addActionListener(e -> toggleMaximize());
 
-        // Ghép vào thanh công cụ cuộn ngang
-        toolBarPanel.add(cbSearchCriteria);
-        toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        // Ghép vào thanh công cụ cuộn ngang: Tìm kiếm + Bộ lọc -> Thống kê & Bảng điểm -> File
         toolBarPanel.add(txtSearch);
+        toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        toolBarPanel.add(btnFilter);
         toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
         toolBarPanel.add(btnSearch);
         toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
@@ -381,16 +419,12 @@ public class StudentManagementPanel extends JPanel {
         toolBarPanel.add(Box.createRigidArea(new Dimension(6, 0)));
         toolBarPanel.add(createToolbarSeparator());
         toolBarPanel.add(Box.createRigidArea(new Dimension(6, 0)));
-        toolBarPanel.add(cbSort);
-        toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
-        toolBarPanel.add(btnSort);
-        toolBarPanel.add(Box.createRigidArea(new Dimension(6, 0)));
-        toolBarPanel.add(createToolbarSeparator());
-        toolBarPanel.add(Box.createRigidArea(new Dimension(6, 0)));
         toolBarPanel.add(btnStatistic);
         toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
         toolBarPanel.add(btnBangDiem);
-        toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        toolBarPanel.add(Box.createRigidArea(new Dimension(6, 0)));
+        toolBarPanel.add(createToolbarSeparator());
+        toolBarPanel.add(Box.createRigidArea(new Dimension(6, 0)));
         toolBarPanel.add(btnExportFile);
         toolBarPanel.add(Box.createRigidArea(new Dimension(5, 0)));
         toolBarPanel.add(btnImportFile);
@@ -462,6 +496,132 @@ public class StudentManagementPanel extends JPanel {
         comp.setPreferredSize(d);
         comp.setMaximumSize(d);
         comp.setMinimumSize(d);
+    }
+
+    private static final String[] SEARCH_OPTIONS = {"Tất cả", "Mã SV", "Họ tên", "Lớp"};
+    private static final String[] SORT_OPTIONS = {
+            "Mặc định",
+            "Tên (A-Z)",
+            "Tên (Z-A)",
+            "Họ và Tên (A-Z)",
+            "Họ và Tên (Z-A)",
+            "Điểm TB (Tăng dần)",
+            "Điểm TB (Giảm dần)",
+            "Mã SV (Tăng dần)",
+            "Mã SV (Giảm dần)"
+    };
+
+    /** Dựng popup 2 nhóm: tiêu chí tìm + cách sắp xếp, chung 1 nút Bộ lọc. */
+    private void buildFilterPopup() {
+        filterPopup = new JPopupMenu();
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+
+        JLabel lblCriteria = new JLabel("Tìm theo:");
+        lblCriteria.setFont(UITheme.FONT_BOLD);
+        lblCriteria.setForeground(UITheme.TEXT_PRIMARY);
+        lblCriteria.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(lblCriteria);
+
+        ButtonGroup groupCriteria = new ButtonGroup();
+        criteriaRadios = new ArrayList<>();
+        for (String opt : SEARCH_OPTIONS) {
+            JRadioButton radio = new JRadioButton(opt, opt.equals(searchCriteria));
+            radio.setFont(UITheme.FONT_REGULAR);
+            radio.setForeground(UITheme.TEXT_PRIMARY);
+            radio.setOpaque(false);
+            radio.setAlignmentX(Component.LEFT_ALIGNMENT);
+            groupCriteria.add(radio);
+            criteriaRadios.add(radio);
+            panel.add(radio);
+        }
+
+        panel.add(Box.createRigidArea(new Dimension(0, 6)));
+        JLabel lblSort = new JLabel("Sắp xếp:");
+        lblSort.setFont(UITheme.FONT_BOLD);
+        lblSort.setForeground(UITheme.TEXT_PRIMARY);
+        lblSort.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(lblSort);
+
+        ButtonGroup groupSort = new ButtonGroup();
+        sortRadios = new ArrayList<>();
+        for (int i = 0; i < SORT_OPTIONS.length; i++) {
+            JRadioButton radio = new JRadioButton(SORT_OPTIONS[i], (i - 1) == sortIndex);
+            radio.setFont(UITheme.FONT_REGULAR);
+            radio.setForeground(UITheme.TEXT_PRIMARY);
+            radio.setOpaque(false);
+            radio.setAlignmentX(Component.LEFT_ALIGNMENT);
+            groupSort.add(radio);
+            sortRadios.add(radio);
+            panel.add(radio);
+        }
+
+        panel.add(Box.createRigidArea(new Dimension(0, 8)));
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        btnRow.setOpaque(false);
+        btnRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JButton btnApply = new ModernButton("Áp dụng", UITheme.PRIMARY);
+        btnApply.setPreferredSize(new Dimension(90, 30));
+        btnApply.addActionListener(e -> {
+            readFilterPopup();
+            applyFilterSort();
+            filterPopup.setVisible(false);
+        });
+        JButton btnReset = new ModernButton("Đặt lại", UITheme.NEUTRAL_BTN_BG,
+                UITheme.NEUTRAL_BTN_HOVER, UITheme.NEUTRAL_BTN_TEXT);
+        ((ModernButton) btnReset).setBorderColor(UITheme.NEUTRAL_BTN_BORDER);
+        btnReset.setPreferredSize(new Dimension(80, 30));
+        btnReset.addActionListener(e -> {
+            txtSearch.setText("");
+            searchCriteria = "Tất cả";
+            sortIndex = -1;
+            syncFilterPopup();
+            applyFilterSort();
+            filterPopup.setVisible(false);
+        });
+        btnRow.add(btnReset);
+        btnRow.add(btnApply);
+        panel.add(btnRow);
+
+        filterPopup.add(panel);
+    }
+
+    private void readFilterPopup() {
+        for (JRadioButton radio : criteriaRadios) {
+            if (radio.isSelected()) {
+                searchCriteria = radio.getText();
+                break;
+            }
+        }
+        sortIndex = -1;
+        for (int i = 1; i < sortRadios.size(); i++) {
+            if (sortRadios.get(i).isSelected()) {
+                sortIndex = i - 1;
+                break;
+            }
+        }
+    }
+
+    private void syncFilterPopup() {
+        if (criteriaRadios == null || sortRadios == null) {
+            return;
+        }
+        for (JRadioButton radio : criteriaRadios) {
+            radio.setSelected(radio.getText().equals(searchCriteria));
+        }
+        for (int i = 0; i < sortRadios.size(); i++) {
+            sortRadios.get(i).setSelected((i - 1) == sortIndex);
+        }
+    }
+
+    /** Dấu chấm trên nút khi lọc/sắp xếp đang khác mặc định. */
+    private void updateFilterBadge() {
+        boolean active = !"Tất cả".equals(searchCriteria)
+                || !txtSearch.getText().trim().isEmpty()
+                || sortIndex >= 0;
+        btnFilter.setText(active ? "Bộ lọc •" : "Bộ lọc");
     }
 
     private JComponent createToolbarSeparator() {
@@ -539,23 +699,83 @@ public class StudentManagementPanel extends JPanel {
             }
         });
 
+        // 2. Double-click mở bảng điểm & Popup menu ngữ cảnh chuột phải trên bảng sinh viên
+        tblSinhVien.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
+                    int row = tblSinhVien.rowAtPoint(e.getPoint());
+                    if (row >= 0) {
+                        tblSinhVien.setRowSelectionInterval(row, row);
+                        openBangDiem();
+                    }
+                }
+            }
+
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                handleTablePopup(e);
+            }
+
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent e) {
+                handleTablePopup(e);
+            }
+
+            private void handleTablePopup(java.awt.event.MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    int row = tblSinhVien.rowAtPoint(e.getPoint());
+                    if (row >= 0) {
+                        if (!tblSinhVien.isRowSelected(row)) {
+                            tblSinhVien.setRowSelectionInterval(row, row);
+                        }
+                    }
+                }
+            }
+        });
+
+        tableContextMenu = new JPopupMenu() {
+            @Override
+            public void show(Component invoker, int x, int y) {
+                int row = tblSinhVien.rowAtPoint(new Point(x, y));
+                if (row >= 0) {
+                    if (!tblSinhVien.isRowSelected(row)) {
+                        tblSinhVien.setRowSelectionInterval(row, row);
+                    }
+                    super.show(invoker, x, y);
+                }
+            }
+        };
+        JMenuItem miBangDiem = new JMenuItem("📊 Xem bảng điểm chi tiết môn học...");
+        miBangDiem.setFont(UITheme.FONT_REGULAR);
+        miBangDiem.addActionListener(e -> openBangDiem());
+        tableContextMenu.add(miBangDiem);
+        tblSinhVien.setComponentPopupMenu(tableContextMenu);
+
         btnAdd.addActionListener(e -> onAddStudent());
         btnUpdate.addActionListener(e -> onUpdateStudent());
         btnDelete.addActionListener(e -> onDeleteStudent());
         btnClear.addActionListener(e -> clearFormAndReload());
 
-        btnSearch.addActionListener(e -> onSearch());
-        txtSearch.addActionListener(e -> onSearch());
+        btnSearch.addActionListener(e -> applyFilterSort());
+        txtSearch.addActionListener(e -> applyFilterSort());
+        btnFilter.addActionListener(e -> filterPopup.show(btnFilter, 0, btnFilter.getHeight()));
 
         btnRefresh.addActionListener(e -> {
             txtSearch.setText("");
+            searchCriteria = "Tất cả";
+            sortIndex = -1;
+            syncFilterPopup();
+            updateFilterBadge();
             viewList = new ArrayList<>(masterList);
             renderBatch(viewList);
         });
 
-        btnSort.addActionListener(e -> onSort());
         btnStatistic.addActionListener(e -> showStatisticDialog());
         btnBangDiem.addActionListener(e -> openBangDiem());
+        if (btnOpenBangDiem != null) {
+            btnOpenBangDiem.addActionListener(e -> openBangDiem());
+        }
         btnExportFile.addActionListener(e -> onExportFile());
         btnImportFile.addActionListener(e -> onImportFile());
     }
@@ -592,7 +812,7 @@ public class StudentManagementPanel extends JPanel {
         String maSV = tableModel.getValueAt(modelRow, 1).toString();
         String hoTen = tableModel.getValueAt(modelRow, 2).toString();
         String lop = tableModel.getValueAt(modelRow, 3).toString();
-        Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+        java.awt.Window owner = SwingUtilities.getWindowAncestor(this);
         BangDiemDialog dlg = new BangDiemDialog(owner, maSV, hoTen, lop);
         dlg.setOnSaved(() -> refreshAfterMutation());
         dlg.setVisible(true);
@@ -769,6 +989,8 @@ public class StudentManagementPanel extends JPanel {
 
         txtMaSV.setEditable(true);
         txtMaSV.setBackground(Color.WHITE);
+        txtDiemTB.setEditable(false);
+        txtDiemTB.setBackground(UITheme.BG_MUTED);
         tblSinhVien.clearSelection();
         loadDataToTable();
         txtMaSV.requestFocus();
@@ -783,12 +1005,16 @@ public class StudentManagementPanel extends JPanel {
         }
 
         try {
+            String scoreStr = txtDiemTB.getText().trim();
+            if (scoreStr.isEmpty()) {
+                scoreStr = "0.0";
+            }
             SinhVien sv = SinhVien.validateAndCreate(
                     txtMaSV.getText(),
                     txtHoTen.getText(),
                     txtLop.getText(),
                     txtNgaySinh.getText(),
-                    txtDiemTB.getText()
+                    scoreStr
             );
 
             if (dao.existsById(sv.getMaSV())) {
@@ -826,12 +1052,16 @@ public class StudentManagementPanel extends JPanel {
         }
 
         try {
+            String scoreStr = txtDiemTB.getText().trim();
+            if (scoreStr.isEmpty()) {
+                scoreStr = "0.0";
+            }
             SinhVien sv = SinhVien.validateAndCreate(
                     txtMaSV.getText(),
                     txtHoTen.getText(),
                     txtLop.getText(),
                     txtNgaySinh.getText(),
-                    txtDiemTB.getText()
+                    scoreStr
             );
 
             boolean success = dao.update(sv);
@@ -893,38 +1123,62 @@ public class StudentManagementPanel extends JPanel {
         txtHoTen.setText("");
         txtLop.setText("");
         txtNgaySinh.setText("");
+        if (datePickerNgaySinh != null) {
+            datePickerNgaySinh.clear();
+        }
         txtDiemTB.setText("");
         txtMaSV.setEditable(true);
         txtMaSV.setBackground(Color.WHITE);
+        txtDiemTB.setEditable(false);
+        txtDiemTB.setBackground(UITheme.BG_MUTED);
         tblSinhVien.clearSelection();
     }
 
-    private void onSearch() {
+    /**
+     * Luồng lọc + sắp xếp thống nhất: tìm qua DAO (giữ so khớp không dấu của MySQL),
+     * rồi sắp xếp in-memory trên kết quả (để lọc và sắp xếp cộng dồn, không xóa nhau).
+     * Offline thì lọc in-memory.
+     */
+    public void applyFilterSort() {
         String keyword = txtSearch.getText().trim();
-        String criteria = (String) cbSearchCriteria.getSelectedItem();
-
+        List<SinhVien> base;
         try {
-            List<SinhVien> list = dao.search(keyword, criteria);
-            viewList = new ArrayList<>(list);
-            renderBatch(viewList);
-            if (viewList.isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "Không tìm thấy sinh viên nào phù hợp với từ khóa: '" + keyword + "'",
-                        "Kết quả tìm kiếm", JOptionPane.INFORMATION_MESSAGE);
-            }
+            base = dao.search(keyword, searchCriteria);
         } catch (SQLException ex) {
-            searchInMemory(keyword, criteria);
+            base = filterInMemory(keyword, searchCriteria);
+        }
+        if (sortIndex >= 0) {
+            String sortBy;
+            boolean asc;
+            switch (sortIndex) {
+                case 0: sortBy = "TEN"; asc = true; break;
+                case 1: sortBy = "TEN"; asc = false; break;
+                case 2: sortBy = "HOTEN"; asc = true; break;
+                case 3: sortBy = "HOTEN"; asc = false; break;
+                case 4: sortBy = "DIEM"; asc = true; break;
+                case 5: sortBy = "DIEM"; asc = false; break;
+                case 6: sortBy = "MASV"; asc = true; break;
+                case 7: sortBy = "MASV"; asc = false; break;
+                default: sortBy = "TEN"; asc = true; break;
+            }
+            base.sort(buildComparator(sortBy, asc));
+        }
+        viewList = new ArrayList<>(base);
+        renderBatch(viewList);
+        updateFilterBadge();
+        if (viewList.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Không tìm thấy sinh viên nào phù hợp với từ khóa: '" + keyword + "'",
+                    "Kết quả tìm kiếm", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
-    private void searchInMemory(String keyword, String criteria) {
+    private List<SinhVien> filterInMemory(String keyword, String criteria) {
         if (masterList.isEmpty()) {
             loadFallbackStudents();
         }
         if (keyword == null || keyword.isEmpty()) {
-            viewList = new ArrayList<>(masterList);
-            renderBatch(viewList);
-            return;
+            return new ArrayList<>(masterList);
         }
         String lowerKey = keyword.toLowerCase(Locale.ROOT);
         List<SinhVien> filtered = new ArrayList<>();
@@ -950,46 +1204,10 @@ public class StudentManagementPanel extends JPanel {
                 filtered.add(sv);
             }
         }
-        viewList = filtered;
-        renderBatch(viewList);
-        if (viewList.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Không tìm thấy sinh viên nào phù hợp với từ khóa: '" + keyword + "'",
-                    "Kết quả tìm kiếm", JOptionPane.INFORMATION_MESSAGE);
-        }
+        return filtered;
     }
 
-    private void onSort() {
-        int sortIndex = cbSort.getSelectedIndex();
-        String sortBy;
-        boolean asc;
-
-        switch (sortIndex) {
-            case 0: sortBy = "TEN"; asc = true; break;
-            case 1: sortBy = "TEN"; asc = false; break;
-            case 2: sortBy = "HOTEN"; asc = true; break;
-            case 3: sortBy = "HOTEN"; asc = false; break;
-            case 4: sortBy = "DIEM"; asc = true; break;
-            case 5: sortBy = "DIEM"; asc = false; break;
-            case 6: sortBy = "MASV"; asc = true; break;
-            case 7: sortBy = "MASV"; asc = false; break;
-            default: sortBy = "TEN"; asc = true; break;
-        }
-
-        try {
-            List<SinhVien> list = dao.getAllSorted(sortBy, asc);
-            viewList = new ArrayList<>(list);
-            renderBatch(viewList);
-        } catch (SQLException ex) {
-            sortInMemory(sortBy, asc);
-        }
-    }
-
-    private void sortInMemory(String sortBy, boolean asc) {
-        if (masterList.isEmpty()) {
-            loadFallbackStudents();
-        }
-        List<SinhVien> sorted = new ArrayList<>(masterList);
+    private java.util.Comparator<SinhVien> buildComparator(String sortBy, boolean asc) {
         java.text.Collator viCollator = java.text.Collator.getInstance(new Locale("vi", "VN"));
         java.util.Comparator<SinhVien> comp;
         switch (sortBy) {
@@ -1012,9 +1230,7 @@ public class StudentManagementPanel extends JPanel {
         if (!asc) {
             comp = comp.reversed();
         }
-        sorted.sort(comp);
-        viewList = sorted;
-        renderBatch(viewList);
+        return comp;
     }
 
     private void loadFallbackStudents() {
@@ -1257,12 +1473,33 @@ public class StudentManagementPanel extends JPanel {
         return btnClear;
     }
 
-    public JComboBox<String> getCbSort() {
-        return cbSort;
+    /** Giữ tương thích test: áp dụng sắp xếp hiện tại của bộ lọc thống nhất. */
+    public void triggerSort() {
+        applyFilterSort();
     }
 
-    public void triggerSort() {
-        onSort();
+    public void setSortIndex(int index) {
+        this.sortIndex = index;
+        syncFilterPopup();
+        updateFilterBadge();
+    }
+
+    public int getSortIndex() {
+        return sortIndex;
+    }
+
+    public void setSearchCriteria(String criteria) {
+        this.searchCriteria = criteria;
+        syncFilterPopup();
+        updateFilterBadge();
+    }
+
+    public String getSearchCriteria() {
+        return searchCriteria;
+    }
+
+    public JButton getBtnFilter() {
+        return btnFilter;
     }
 
     public KpiCardsPanel getKpiPanel() {
@@ -1297,8 +1534,8 @@ public class StudentManagementPanel extends JPanel {
         return btnSearch;
     }
 
-    public JComboBox<String> getCbSearchCriteria() {
-        return cbSearchCriteria;
+    public JPopupMenu getFilterPopup() {
+        return filterPopup;
     }
 
     public JButton getBtnRefresh() {
@@ -1311,6 +1548,14 @@ public class StudentManagementPanel extends JPanel {
 
     public JButton getBtnBangDiem() {
         return btnBangDiem;
+    }
+
+    public JButton getBtnOpenBangDiem() {
+        return btnOpenBangDiem;
+    }
+
+    public JPopupMenu getTableContextMenu() {
+        return tableContextMenu;
     }
 
     public DatePicker getDatePickerNgaySinh() {

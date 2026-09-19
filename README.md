@@ -76,11 +76,12 @@ src/main/java/com/quanlysinhvien/
 4. **Xóa sinh viên:**
    - Chọn dòng trên bảng -> Bấm `Xóa sinh viên`.
    - Hộp thoại xác nhận `JOptionPane.showConfirmDialog` bảo đảm không xóa nhầm.
-5. **Tìm kiếm sinh viên:**
-   - Tìm kiếm linh hoạt theo: `Tất cả`, `Mã SV`, `Họ tên`, `Lớp`.
-   - Nút `Tất cả` để làm mới danh sách ban đầu.
-6. **Sắp xếp:**
-   - Sắp xếp theo: Tên sinh viên (A-Z, Z-A), Điểm trung bình (Tăng dần, Giảm dần), Mã SV.
+5. **Tìm kiếm + Sắp xếp (Bộ lọc thống nhất):**
+   - 1 nút **Bộ lọc** thay 2 dropdown cũ, popup 2 nhóm: *Tìm theo* (`Tất cả`, `Mã SV`, `Họ tên`, `Lớp`)
+     và *Sắp xếp* (Mặc định + Tên A-Z/Z-A, Họ tên A-Z/Z-A, Điểm TB tăng/giảm, Mã SV tăng/giảm).
+   - Nút hiện dấu `•` khi lọc/sort khác mặc định; nút **Tất cả** đặt lại toàn bộ.
+   - Tìm qua DAO (giữ so khớp không dấu của MySQL, VD gõ `Nguyen` vẫn ra `Nguyễn`),
+     sắp xếp cộng dồn trên kết quả đã lọc. Enter trong ô tìm = Áp dụng.
 7. **Thống kê:**
    - Hộp thoại thống kê chi tiết:
      + Tổng số lượng sinh viên hiện có.
@@ -101,17 +102,49 @@ src/main/java/com/quanlysinhvien/
 mvn clean compile exec:java
 ```
 
-### Bảng điểm theo môn (nhánh `feature/bang-diem-theo-mon`)
-- Mỗi sinh viên random **4–7 môn tự do** từ 20 môn chuyên ngành (`MonHoc`, mã thật TKB HK1 2026-2027).
-- Mỗi môn 3 đầu điểm: **Báo cáo 40% + Chuyên cần 10% + Cuối kỳ 50%** → Điểm môn (làm tròn 2).
-- `DiemTB` = **Σ(Điểm môn × Tín chỉ)/Σ(Tín chỉ)** chuẩn học vụ, tự ghi đè sau khi lưu. Nút **Bảng điểm** trên toolbar mở dialog
-  xem/sửa/thêm/xóa môn kèm biểu đồ JFreeChart. Ô Ngày sinh có DatePicker (đồng bộ ô text cũ).
-- Thư viện UI bổ sung: `MigLayout`, `JFreeChart`, `LGoodDatePicker` (xem `pom.xml`).
+### Nhánh `feature/bang-diem-theo-mon` — Bảng điểm theo môn (chi tiết)
 
-### 4.2. Chạy toàn bộ Test tự động (61 Tests)
+**Mô hình dữ liệu (mới, không sửa bảng cũ):**
+- `MonHoc(MaMH, TenMH, SoTC)`: 20 môn chuyên ngành seed từ TKB HK1 2026-2027
+  (mã thật: 841021, 841044, 841047, 841072, 841111, ..., 841438, 841467, 841468).
+- `Diem(MaSV, MaMH, DiemBaoCao, DiemChuyenCan, DiemCuoiKy)`: khóa chính kép,
+  FK `CASCADE` khi xóa SV, `RESTRICT` khi xóa môn đang có điểm. **Điểm môn không lưu cứng**,
+  luôn tính realtime để khỏi lệch khi sửa 1 đầu điểm.
+- App tự tạo bảng + seed ở lần chạy đầu (`DatabaseConnection.initializeDatabase`,
+  script tươi trong `database.sql`): mỗi SV random **4–7 môn phân tầng học lực**
+  (giỏi/khá/TB rải đều GPA, tránh TB dồn một cục), rồi ghi đè `SinhVien.DiemTB`.
+
+**Công thức điểm (đã chốt, chung mọi môn):**
+- `Điểm môn = Báo cáo×0.4 + Chuyên cần×0.1 + Cuối kỳ×0.5` (thang 0–10, làm tròn 2).
+- `DiemTB = Σ(Điểm môn × Tín chỉ) / Σ(Tín chỉ)` chuẩn học vụ; mỗi lần khởi động
+  tự đồng bộ lại TB cho SV đã có điểm (`syncTichLuyAll`, idempotent).
+
+**Dialog Bảng điểm (`BangDiemDialog`, mở từ nút Bảng điểm / menu chuột phải trên bảng):**
+- Bảng 7 cột: Mã MH, Môn học, TC, 3 ô điểm sửa trực tiếp, Điểm môn tự tính.
+  Sửa ô nào là Điểm môn, TB tích lũy và biểu đồ cập nhật ngay (reactive).
+- Nút **Thêm**: môn mới **để trống 3 ô cho nhập tay** (không prefill điểm mẫu);
+  môn chưa nhập đủ thì TB/chart bỏ qua. Nút **Xóa môn** giữ tối thiểu 1 môn/SV.
+- Nút **Lưu**: validate toàn bộ, báo đúng dòng khi thiếu/sai (VD
+  `Báo cáo (dòng 5) không được để trống!`), ghi **1 transaction duy nhất**
+  (xóa môn đã gỡ + upsert + ghi TB — lỗi là rollback hết). Ô đang gõ dở mà sai
+  (trống, chữ, ngoài 0–10) thì chặn ngay tại chỗ, viền đỏ.
+- Biểu đồ cột JFreeChart điểm từng môn (trục Y cố định 0–10, nền theo theme FlatLaf).
+- Mất MySQL thì tự vào **chế độ demo**: 4 môn mẫu xem được, lưu tạm không ghi DB.
+
+**Form chính:** ô Ngày sinh dùng DatePicker lịch (đồng bộ 2 chiều với ô text,
+  validation `yyyy-MM-dd` và test cũ giữ nguyên).
+
+**Thư viện bổ sung (xem `pom.xml`):** `MigLayout` (layout dialog),
+  `JFreeChart` (biểu đồ), `LGoodDatePicker` (chọn ngày).
+
+### 4.2. Chạy toàn bộ Test tự động (83 Tests)
 ```bash
 mvn clean test
 ```
+Bao gồm: `DiemCalculatorTest` (công thức 40/10/50, TB trọng số TC),
+  `DiemDAOTest` (seed 20 môn, 4–7 môn/SV, upsert idempotent, save 1 transaction),
+  `BangDiemDialogTest` (chart, thêm/xóa môn, ô trống nhập tay, chặn lưu sai, demo mode),
+  `BangDiemUiTest`, `UnifiedFilterTest` (bộ lọc cộng dồn, tìm không dấu, badge, refresh).
 
 ### 4.3. Đóng gói ứng dụng thành file JAR
 ```bash

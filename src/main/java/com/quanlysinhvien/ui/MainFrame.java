@@ -25,6 +25,7 @@ public class MainFrame extends JFrame {
     private CalculatorPanel calculatorPanel;
     private SlideTabbedPane tabbedPane;
     private JPanel statusBar;
+    private JMenuItem itemReseed;
 
     public MainFrame() {
         initUI();
@@ -147,6 +148,10 @@ public class MainFrame extends JFrame {
         menuSystem.setFont(UITheme.FONT_REGULAR);
         menuSystem.setForeground(UITheme.TEXT_PRIMARY);
 
+        itemReseed = new JMenuItem("🔄 Tạo lại dữ liệu điểm đa dạng (Xuất sắc - Giỏi - Khá - TB - Yếu)");
+        itemReseed.setFont(UITheme.FONT_REGULAR);
+        itemReseed.addActionListener(e -> doReseedDiverseGrades());
+
         JMenuItem itemLogout = new JMenuItem("Đăng xuất");
         itemLogout.setFont(UITheme.FONT_REGULAR);
         itemLogout.addActionListener(e -> doLogout());
@@ -163,6 +168,8 @@ public class MainFrame extends JFrame {
             }
         });
 
+        menuSystem.add(itemReseed);
+        menuSystem.addSeparator();
         menuSystem.add(itemLogout);
         menuSystem.addSeparator();
         menuSystem.add(itemExit);
@@ -206,6 +213,50 @@ public class MainFrame extends JFrame {
         menuBar.add(menuHelp);
 
         setJMenuBar(menuBar);
+    }
+
+    public void doReseedDiverseGrades() {
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Hành động này sẽ xóa và sinh lại toàn bộ điểm các môn học cho tất cả sinh viên,\n"
+                        + "phân bổ theo 5 mức học lực đa dạng:\n"
+                        + "• Xuất sắc (~7%): GPA 9.0 - 9.8\n"
+                        + "• Giỏi (~23%): GPA 8.0 - 8.9\n"
+                        + "• Khá (~42%): GPA 6.5 - 7.9\n"
+                        + "• Trung bình (~21%): GPA 5.0 - 6.4\n"
+                        + "• Yếu (~7%): GPA 3.2 - 4.9\n\n"
+                        + "Bạn có chắc chắn muốn tạo lại dữ liệu điểm đa dạng?",
+                "Xác nhận tạo lại dữ liệu điểm đa dạng",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                executeReseedDiverseGrades();
+                JOptionPane.showMessageDialog(this,
+                        "Đã tạo lại dữ liệu điểm đa dạng thành công!\n"
+                                + "Toàn bộ sinh viên đã được cập nhật điểm và xếp loại đa dạng trên hệ thống.",
+                        "Thành công",
+                        JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                        "Lỗi khi tạo lại dữ liệu điểm: " + ex.getMessage(),
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    public void executeReseedDiverseGrades() throws java.sql.SQLException {
+        new com.quanlysinhvien.dao.DiemDAO().reseedDiverseGrades();
+        if (tabbedPane != null) {
+            tabbedPane.setSelectedIndex(0);
+        }
+        if (studentPanel != null) {
+            studentPanel.loadDataToTable();
+        }
+    }
+
+    public JMenuItem getItemReseed() {
+        return itemReseed;
     }
 
     public void doLogout() {
