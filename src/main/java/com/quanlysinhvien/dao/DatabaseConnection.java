@@ -196,8 +196,47 @@ public class DatabaseConnection {
                     }
                 }
             }
+            // Tạo bảng MonHoc / Diem cho tính năng bảng điểm theo môn (hướng A)
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS " + DB_NAME + ".MonHoc ("
+                    + "MaMH VARCHAR(10) NOT NULL PRIMARY KEY, "
+                    + "TenMH VARCHAR(100) NOT NULL, "
+                    + "SoTC TINYINT NOT NULL DEFAULT 4"
+                    + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS " + DB_NAME + ".Diem ("
+                    + "MaSV VARCHAR(10) NOT NULL, "
+                    + "MaMH VARCHAR(10) NOT NULL, "
+                    + "DiemBaoCao FLOAT NOT NULL, "
+                    + "DiemChuyenCan FLOAT NOT NULL, "
+                    + "DiemCuoiKy FLOAT NOT NULL, "
+                    + "PRIMARY KEY (MaSV, MaMH), "
+                    + "FOREIGN KEY (MaSV) REFERENCES " + DB_NAME + ".SinhVien(MaSV) "
+                    + "ON DELETE CASCADE ON UPDATE CASCADE, "
+                    + "FOREIGN KEY (MaMH) REFERENCES " + DB_NAME + ".MonHoc(MaMH) "
+                    + "ON DELETE RESTRICT ON UPDATE CASCADE"
+                    + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            try {
+                stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_diem_masv ON "
+                        + DB_NAME + ".Diem (MaSV)");
+            } catch (SQLException ignored) {
+                // MySQL cũ không hỗ trợ IF NOT EXISTS cho index — bỏ qua, không chặn khởi động
+            }
+            try {
+                stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_diem_mamh ON "
+                        + DB_NAME + ".Diem (MaMH)");
+            } catch (SQLException ignored) {
+                // Bỏ qua tương tự
+            }
         } catch (SQLException e) {
             System.err.println("Lỗi khi tự động khởi tạo CSDL: " + e.getMessage());
+            return;
+        }
+        // Seed master môn học + điểm random 4-7 môn/SV (chỉ chạy 1 lần, ngoài synchronized rootConn
+        // để dùng đúng connection DB targets và transaction riêng; lỗi seed không chặn app).
+        try {
+            new MonHocDAO().ensureSeeded();
+            new DiemDAO().seedIfEmpty();
+        } catch (Exception e) {
+            System.err.println("Lỗi khi seed bảng điểm: " + e.getMessage());
         }
     }
 }

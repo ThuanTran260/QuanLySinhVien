@@ -14,6 +14,50 @@ CREATE TABLE SinhVien (
     DiemTB FLOAT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Bảng master môn học + điểm thành phần theo môn (hướng A: 40/10/50)
+CREATE TABLE IF NOT EXISTS MonHoc (
+    MaMH VARCHAR(10) NOT NULL PRIMARY KEY,
+    TenMH VARCHAR(100) NOT NULL,
+    SoTC TINYINT NOT NULL DEFAULT 4
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS Diem (
+    MaSV VARCHAR(10) NOT NULL,
+    MaMH VARCHAR(10) NOT NULL,
+    DiemBaoCao FLOAT NOT NULL,
+    DiemChuyenCan FLOAT NOT NULL,
+    DiemCuoiKy FLOAT NOT NULL,
+    PRIMARY KEY (MaSV, MaMH),
+    FOREIGN KEY (MaSV) REFERENCES SinhVien(MaSV) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (MaMH) REFERENCES MonHoc(MaMH) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Seed 20 môn chuyên ngành (mã thật từ TKB DCT.md HK1 2026-2027)
+INSERT IGNORE INTO MonHoc (MaMH, TenMH, SoTC) VALUES
+('841021', 'Kiến trúc máy tính', 3),
+('841044', 'Phương pháp lập trình hướng đối tượng', 4),
+('841047', 'Công nghệ phần mềm', 4),
+('841072', 'Các công nghệ lập trình hiện đại', 3),
+('841111', 'Phân tích thiết kế hướng đối tượng', 4),
+('841120', 'An toàn và bảo mật dữ liệu trong HTTT', 3),
+('841302', 'Cơ sở lập trình', 4),
+('841322', 'Máy học', 4),
+('841403', 'Cấu trúc rời rạc', 4),
+('841408', 'Kiểm thử phần mềm', 4),
+('841411', 'Quản trị mạng', 4),
+('841422', 'Ngôn ngữ lập trình Python', 4),
+('841429', 'Cơ sở dữ liệu nâng cao', 4),
+('841431', 'Quản lý dự án phần mềm', 4),
+('841432', 'Phân tích dữ liệu', 4),
+('841434', 'Thương mại điện tử và ứng dụng', 4),
+('841438', 'Lập trình ứng dụng mạng', 4),
+('841448', 'Xử lý ngôn ngữ tự nhiên', 4),
+('841467', 'Công nghệ .NET', 4),
+('841468', 'Chuyên đề J2EE', 4);
+
+-- Ghi chú: bảng Diem (4-7 môn/SV) do app tự seed random ở lần chạy đầu
+-- (DiemDAO.seedIfEmpty) rồi ghi đè SinhVien.DiemTB = AVG. Không seed cứng ở đây.
+
 -- Thêm 84 sinh viên từ danh sách lớp học phần Lập trình ứng dụng mạng
 INSERT INTO SinhVien (MaSV, HoTen, Lop, NgaySinh, DiemTB) VALUES
 ('3124410003', 'Đặng Lương Thế Anh', 'DCT1243', '2006-10-22', 8.2),

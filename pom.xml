@@ -40,6 +40,27 @@
             <artifactId>flatlaf</artifactId>
             <version>3.5.4</version>
         </dependency>
+
+        <!-- Layout gọn cho dialog bảng điểm -->
+        <dependency>
+            <groupId>com.miglayout</groupId>
+            <artifactId>miglayout-swing</artifactId>
+            <version>11.0</version>
+        </dependency>
+
+        <!-- Biểu đồ điểm theo môn -->
+        <dependency>
+            <groupId>org.jfree</groupId>
+            <artifactId>jfreechart</artifactId>
+            <version>1.5.4</version>
+        </dependency>
+
+        <!-- Ô chọn ngày sinh -->
+        <dependency>
+            <groupId>com.github.lgooddatepicker</groupId>
+            <artifactId>LGoodDatePicker</artifactId>
+            <version>11.2.1</version>
+        </dependency>
     </dependencies>
 
     <build>
