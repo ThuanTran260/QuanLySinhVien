@@ -2,8 +2,6 @@ package com.quanlysinhvien;
 
 import com.quanlysinhvien.ui.components.ModernSidebar;
 import com.quanlysinhvien.ui.components.SidebarIcons;
-import com.quanlysinhvien.ui.theme.UITheme;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

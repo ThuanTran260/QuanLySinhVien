@@ -97,10 +97,10 @@ public class ModernSidebar extends JPanel {
         menuContainer.setLayout(new BoxLayout(menuContainer, BoxLayout.Y_AXIS));
         menuContainer.setBorder(BorderFactory.createEmptyBorder(12, 6, 12, 6));
 
-        addNavItem(menuContainer, MenuId.SINH_VIEN, "Sinh Viên", SidebarIcons.createStudentIcon(20), "SV");
-        addNavItem(menuContainer, MenuId.MAY_TINH, "Máy Tính", SidebarIcons.createCalculatorIcon(20), "CALC");
-        addNavItem(menuContainer, MenuId.THONG_KE, "Thống Kê", SidebarIcons.createChartIcon(20), "STAT");
-        addNavItem(menuContainer, MenuId.GIOI_THIEU, "Giới Thiệu", SidebarIcons.createAboutIcon(20), "INFO");
+        addNavItem(menuContainer, MenuId.SINH_VIEN, "Sinh Viên", SidebarIcons.createStudentIcon(20));
+        addNavItem(menuContainer, MenuId.MAY_TINH, "Máy Tính", SidebarIcons.createCalculatorIcon(20));
+        addNavItem(menuContainer, MenuId.THONG_KE, "Thống Kê", SidebarIcons.createChartIcon(20));
+        addNavItem(menuContainer, MenuId.GIOI_THIEU, "Giới Thiệu", SidebarIcons.createAboutIcon(20));
 
         add(menuContainer, BorderLayout.CENTER);
 
@@ -136,8 +136,8 @@ public class ModernSidebar extends JPanel {
         updateItemsAppearance();
     }
 
-    private void addNavItem(JPanel container, MenuId id, String label, Icon icon, String shortCode) {
-        NavButton btn = new NavButton(id, label, icon, shortCode);
+    private void addNavItem(JPanel container, MenuId id, String label, Icon icon) {
+        NavButton btn = new NavButton(id, label, icon);
         btn.addActionListener(e -> {
             setActive(id);
             if (navigationListener != null) {
@@ -147,10 +147,6 @@ public class ModernSidebar extends JPanel {
         navButtons.put(id, btn);
         container.add(btn);
         container.add(Box.createRigidArea(new Dimension(0, 4)));
-    }
-
-    private void addNavItem(JPanel container, MenuId id, String label, String iconText, String shortCode) {
-        addNavItem(container, id, label, SidebarIcons.getNavIcon(id, 20), shortCode);
     }
 
     public void toggle() {
@@ -227,16 +223,12 @@ public class ModernSidebar extends JPanel {
         private final MenuId id;
         private final String fullLabel;
         private final Icon vectorIcon;
-        private final String iconText;
-        private final String shortCode;
         private boolean isActive = false;
 
-        public NavButton(MenuId id, String fullLabel, Icon icon, String shortCode) {
+        public NavButton(MenuId id, String fullLabel, Icon icon) {
             this.id = id;
             this.fullLabel = fullLabel;
             this.vectorIcon = icon;
-            this.iconText = "";
-            this.shortCode = shortCode;
 
             setFont(UITheme.FONT_REGULAR);
             setForeground(UITheme.TEXT_SECONDARY);
@@ -267,8 +259,12 @@ public class ModernSidebar extends JPanel {
             updateExpandedState(true);
         }
 
+        public NavButton(MenuId id, String fullLabel, Icon icon, String shortCode) {
+            this(id, fullLabel, icon);
+        }
+
         public NavButton(MenuId id, String fullLabel, String iconText, String shortCode) {
-            this(id, fullLabel, SidebarIcons.getNavIcon(id, 20), shortCode);
+            this(id, fullLabel, SidebarIcons.getNavIcon(id, 20));
         }
 
         public MenuId getMenuId() {
