@@ -124,6 +124,19 @@ public class SinhVienDAO {
     }
 
     /**
+     * Cập nhật riêng DiemTB (sau khi lưu bảng điểm môn, không đụng các cột khác).
+     */
+    public boolean updateDiemTB(String maSV, float diemTB) throws SQLException {
+        String sql = "UPDATE SinhVien SET DiemTB = ? WHERE MaSV = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setFloat(1, diemTB);
+            ps.setString(2, maSV.trim());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
      * Xóa sinh viên theo Mã SV
      */
     public boolean delete(String maSV) throws SQLException {
