@@ -82,12 +82,14 @@ public class DiemDAOTest {
             Assumptions.assumeFalse(current.isEmpty(), "SV mẫu chưa có điểm seed");
             java.util.List<com.quanlysinhvien.model.Diem> toSave = new java.util.ArrayList<>();
             java.util.List<Double> mons = new java.util.ArrayList<>();
+            java.util.List<Integer> tcs = new java.util.ArrayList<>();
             for (DiemDetail d : current) {
                 toSave.add(new Diem(d.getMaSV(), d.getMaMH(),
                         d.getDiemBaoCao(), d.getDiemChuyenCan(), d.getDiemCuoiKy()));
                 mons.add(d.getDiemMon());
+                tcs.add(d.getSoTC());
             }
-            double tb = com.quanlysinhvien.model.DiemCalculator.diemTB(mons);
+            double tb = com.quanlysinhvien.model.DiemCalculator.diemTBTinChi(mons, tcs);
             int countBefore = diemDAO.countAll();
             diemDAO.saveBangDiem("3124410003", toSave, tb);
             assertEquals(countBefore, diemDAO.countAll(), "Lưu lại y nguyên không được đổi tổng dòng");

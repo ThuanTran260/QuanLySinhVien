@@ -104,7 +104,7 @@ mvn clean compile exec:java
 ### Bảng điểm theo môn (nhánh `feature/bang-diem-theo-mon`)
 - Mỗi sinh viên random **4–7 môn tự do** từ 20 môn chuyên ngành (`MonHoc`, mã thật TKB HK1 2026-2027).
 - Mỗi môn 3 đầu điểm: **Báo cáo 40% + Chuyên cần 10% + Cuối kỳ 50%** → Điểm môn (làm tròn 2).
-- `DiemTB` = AVG điểm môn, tự ghi đè sau khi lưu. Nút **Bảng điểm** trên toolbar mở dialog
+- `DiemTB` = **Σ(Điểm môn × Tín chỉ)/Σ(Tín chỉ)** chuẩn học vụ, tự ghi đè sau khi lưu. Nút **Bảng điểm** trên toolbar mở dialog
   xem/sửa/thêm/xóa môn kèm biểu đồ JFreeChart. Ô Ngày sinh có DatePicker (đồng bộ ô text cũ).
 - Thư viện UI bổ sung: `MigLayout`, `JFreeChart`, `LGoodDatePicker` (xem `pom.xml`).
 

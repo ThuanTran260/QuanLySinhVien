@@ -60,4 +60,28 @@ public final class DiemCalculator {
         }
         return round2(sum / diemMons.size());
     }
+
+    /**
+     * TB tích lũy chuẩn học vụ: Σ(Điểm môn × Tín chỉ) / Σ(Tín chỉ), làm tròn 2.
+     * Đây là công thức chính thức cho DiemTB(SV). Rỗng -> 0.
+     */
+    public static double diemTBTinChi(List<Double> diemMons, List<Integer> tinChis) {
+        if (diemMons == null || diemMons.isEmpty()) {
+            return 0.0;
+        }
+        if (tinChis == null || tinChis.size() != diemMons.size()) {
+            throw new IllegalArgumentException("Số tín chỉ phải khớp số môn!");
+        }
+        double weighted = 0;
+        int totalTC = 0;
+        for (int i = 0; i < diemMons.size(); i++) {
+            int tc = tinChis.get(i);
+            if (tc <= 0) {
+                throw new IllegalArgumentException("Tín chỉ phải > 0!");
+            }
+            weighted += diemMons.get(i) * tc;
+            totalTC += tc;
+        }
+        return round2(weighted / totalTC);
+    }
 }

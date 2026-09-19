@@ -176,14 +176,41 @@ public class DiemDAO {
         return s.replace("\\", "\\\\").replace("'", "\\'");
     }
 
-    /** TB tích lũy = AVG(DiemMon realtime, round2). Rỗng -> 0. */
+    /** TB tích lũy chuẩn học vụ = Σ(DiemMon × TC) / Σ(TC), round2. Rỗng -> 0. */
     public double calcTichLuy(String maSV) throws SQLException {
         List<DiemDetail> list = getByMaSV(maSV);
         List<Double> mons = new ArrayList<>();
+        List<Integer> tcs = new ArrayList<>();
         for (DiemDetail d : list) {
             mons.add(d.getDiemMon());
+            tcs.add(d.getSoTC());
         }
-        return DiemCalculator.diemTB(mons);
+        return DiemCalculator.diemTBTinChi(mons, tcs);
+    }
+
+    /**
+     * Đồng bộ DiemTB cho mọi SV đã có dòng Diem (chạy mỗi lần khởi động, idempotent).
+     * Dùng khi đổi công thức (trung bình cộng -> trọng số tín chỉ): TB là dữ liệu suy ra,
+     * tính lại không mất thông tin điểm thành phần.
+     */
+    public void syncTichLuyAll() throws SQLException {
+        String distinctSql = "SELECT DISTINCT MaSV FROM Diem";
+        String updateSql = "UPDATE SinhVien SET DiemTB = ? WHERE MaSV = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(distinctSql);
+             PreparedStatement ps = conn.prepareStatement(updateSql)) {
+            List<String> ids = new ArrayList<>();
+            while (rs.next()) {
+                ids.add(rs.getString(1));
+            }
+            for (String id : ids) {
+                ps.setFloat(1, (float) calcTichLuy(id));
+                ps.setString(2, id);
+                ps.addBatch();
+            }
+            ps.executeBatch();
+        }
     }
 
     /**
@@ -229,6 +256,7 @@ public class DiemDAO {
                     int n = 4 + rnd.nextInt(4); // 4-7
                     n = Math.min(n, shuffled.size());
                     List<Double> mons = new ArrayList<>();
+                    List<Integer> tcs = new ArrayList<>();
                     for (int i = 0; i < n; i++) {
                         MonHoc mh = shuffled.get(i);
                         float cc = round1(7 + rnd.nextDouble() * 3);   // chuyên cần 7-10
@@ -241,8 +269,9 @@ public class DiemDAO {
                         psIns.setFloat(5, ck);
                         psIns.addBatch();
                         mons.add(DiemCalculator.diemMon(bc, cc, ck));
+                        tcs.add(mh.getSoTC());
                     }
-                    psUpd.setFloat(1, (float) DiemCalculator.diemTB(mons));
+                    psUpd.setFloat(1, (float) DiemCalculator.diemTBTinChi(mons, tcs));
                     psUpd.setString(2, maSV);
                     psUpd.addBatch();
                 }

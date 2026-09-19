@@ -204,25 +204,27 @@ public class BangDiemDialog extends JDialog {
     private void renderTable(List<DiemDetail> list) {
         tableModel.setRowCount(0);
         List<Double> diemMons = new ArrayList<>();
+        List<Integer> tinChis = new ArrayList<>();
         for (DiemDetail d : list) {
             double dm = d.getDiemMon();
             diemMons.add(dm);
+            tinChis.add(d.getSoTC());
             tableModel.addRow(new Object[]{
                     d.getMaMH(), d.getTenMH(), d.getSoTC(),
                     (double) d.getDiemBaoCao(), (double) d.getDiemChuyenCan(),
                     (double) d.getDiemCuoiKy(), dm
             });
         }
-        updateTichLuy(diemMons);
+        updateTichLuy(diemMons, tinChis);
         refreshChart();
     }
 
-    private void updateTichLuy(List<Double> mons) {
-        if (mons.isEmpty()) {
-            lblTichLuy.setText("TB tích lũy: — (" + 0 + " môn)");
+    private void updateTichLuy(List<Double> diemMons, List<Integer> tinChis) {
+        if (diemMons.isEmpty()) {
+            lblTichLuy.setText("TB tích lũy: — (0 môn)");
         } else {
             lblTichLuy.setText(String.format("TB tích lũy: %.2f (%d môn)",
-                    DiemCalculator.diemTB(mons), mons.size()));
+                    DiemCalculator.diemTBTinChi(diemMons, tinChis), diemMons.size()));
         }
     }
 
@@ -282,17 +284,19 @@ public class BangDiemDialog extends JDialog {
 
     private void refreshTichLuyFromTable() {
         List<Double> diemMons = new ArrayList<>();
+        List<Integer> tinChis = new ArrayList<>();
         for (int i = 0; i < tableModel.getRowCount(); i++) {
             try {
                 double bc = toDouble(tableModel.getValueAt(i, 3));
                 double cc = toDouble(tableModel.getValueAt(i, 4));
                 double ck = toDouble(tableModel.getValueAt(i, 5));
                 diemMons.add(DiemCalculator.diemMon(bc, cc, ck));
+                tinChis.add(((Number) tableModel.getValueAt(i, 2)).intValue());
             } catch (Exception ignored) {
                 // Ô đang nhập dở — bỏ qua khi preview
             }
         }
-        updateTichLuy(diemMons);
+        updateTichLuy(diemMons, tinChis);
         refreshChart();
     }
 
@@ -310,6 +314,7 @@ public class BangDiemDialog extends JDialog {
         // Validate toàn bộ trước khi ghi (báo đúng dòng + tên cột)
         List<Diem> toSave = new ArrayList<>();
         List<Double> diemMons = new ArrayList<>();
+        List<Integer> tinChis = new ArrayList<>();
         for (int i = 0; i < tableModel.getRowCount(); i++) {
             String maMH = String.valueOf(tableModel.getValueAt(i, 0));
             float bc, cc, ck;
@@ -326,13 +331,14 @@ public class BangDiemDialog extends JDialog {
             }
             toSave.add(new Diem(maSV, maMH, bc, cc, ck));
             diemMons.add(DiemCalculator.diemMon(bc, cc, ck));
+            tinChis.add(((Number) tableModel.getValueAt(i, 2)).intValue());
         }
         if (toSave.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Bảng điểm trống, thêm ít nhất 1 môn!",
                     "Thiếu dữ liệu", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        double tb = DiemCalculator.diemTB(diemMons);
+        double tb = DiemCalculator.diemTBTinChi(diemMons, tinChis);
         lblStatus.setText("Đang lưu…");
         new SwingWorker<Void, Void>() {
             @Override

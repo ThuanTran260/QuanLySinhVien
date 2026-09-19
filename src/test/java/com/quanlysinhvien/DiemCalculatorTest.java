@@ -29,6 +29,23 @@ public class DiemCalculatorTest {
     }
 
     @Test
+    @DisplayName("TB tích lũy trọng số tín chỉ Σ(Điểm×TC)/Σ(TC)")
+    void testDiemTBTinChi() {
+        assertEquals(0.0, DiemCalculator.diemTBTinChi(
+                Collections.emptyList(), Collections.emptyList()), 0.001);
+        // TC bằng nhau -> trùng trung bình cộng: (8*4 + 6*4)/8 = 7
+        assertEquals(7.0, DiemCalculator.diemTBTinChi(
+                Arrays.asList(8.0, 6.0), Arrays.asList(4, 4)), 0.001);
+        // (9*3 + 6*4)/7 = 51/7 ≈ 7.29
+        assertEquals(7.29, DiemCalculator.diemTBTinChi(
+                Arrays.asList(9.0, 6.0), Arrays.asList(3, 4)), 0.001);
+        assertThrows(IllegalArgumentException.class, () -> DiemCalculator.diemTBTinChi(
+                Arrays.asList(8.0), Arrays.asList(4, 4)));
+        assertThrows(IllegalArgumentException.class, () -> DiemCalculator.diemTBTinChi(
+                Arrays.asList(8.0), Arrays.asList(0)));
+    }
+
+    @Test
     @DisplayName("Từ chối điểm ngoài 0-10, NaN, rỗng, chữ")
     void testRejectInvalid() {
         assertThrows(IllegalArgumentException.class, () -> DiemCalculator.diemMon(-1, 8, 8));

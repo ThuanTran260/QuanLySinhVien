@@ -235,6 +235,7 @@ public class DatabaseConnection {
         try {
             new MonHocDAO().ensureSeeded();
             new DiemDAO().seedIfEmpty();
+            new DiemDAO().syncTichLuyAll();
         } catch (Exception e) {
             System.err.println("Lỗi khi seed bảng điểm: " + e.getMessage());
         }
